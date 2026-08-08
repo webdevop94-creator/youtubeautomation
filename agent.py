@@ -318,6 +318,15 @@ def run_animation(args) -> int:
     budget = args.count + config.MAX_TOPIC_ATTEMPTS
     kinds = list(config.ANIMATION_KINDS)
 
+    # --dry-run used to be checked only on the trending path, so asking this
+    # mode to plan without building rendered real videos and tried to publish
+    # them. A flag that promises to do nothing has to mean it everywhere.
+    if args.dry_run:
+        plan = [args.kind or kinds[i % len(kinds)] for i in range(args.count)]
+        log(f"  {args.count} video ka plan: {', '.join(plan)}")
+        log("\n--dry-run: yahin ruk raha hoon, koi video nahi banegi.")
+        return 0
+
     while len(published) < args.count and attempts < budget:
         kind = args.kind or kinds[len(published) % len(kinds)]
         attempts += 1
