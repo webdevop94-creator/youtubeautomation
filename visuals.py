@@ -145,9 +145,16 @@ def _subject_scene(word: str, category: str) -> str:
     return SUBJECT_SCENES.get(category, {}).get(word, "")
 
 # Words that describe the video itself or carry no visual meaning at all.
+# The prepositions matter more than they look: "man standing AT podium press
+# conference" was cut to its first three words -- "man standing at" -- and
+# Pexels answered it correctly with a man standing in the sea. Dropping the
+# glue words first means the words that survive are the ones that describe
+# the shot.
 DROP = {"the", "and", "for", "with", "new", "big", "best", "special", "more",
         "aapke", "liye", "video", "like", "share", "next", "full", "story",
-        "subscribe", "channel", "services", "service", "thing", "stuff"}
+        "subscribe", "channel", "services", "service", "thing", "stuff",
+        "at", "in", "on", "of", "to", "a", "an", "into", "onto", "from",
+        "over", "under", "near", "by", "up", "down", "out"}
 
 
 def _clean_query(keywords: str, category: str = "general") -> str:
@@ -165,10 +172,12 @@ def _clean_query(keywords: str, category: str = "general") -> str:
     concrete = [w for w in words if w not in AMBIGUOUS]
     mapped = next((AMBIGUOUS[w] for w in words if w in AMBIGUOUS), "")
 
-    # One concrete word on its own is too vague to search well — pair it with
-    # the mapped scene, or with a companion word from this story's world.
+    # Keep five content words, not three. The script model writes keywords as
+    # a scene ("man standing at podium press conference"); cutting them to
+    # three words threw away the part that identified the shot and left a
+    # phrase so generic it matched anything.
     if len(concrete) >= 2:
-        return " ".join(concrete[:3])
+        return " ".join(concrete[:5])
     if concrete and mapped:
         return f"{concrete[0]} {mapped}".strip()
     if concrete:
