@@ -1,0 +1,25 @@
+﻿.env
+.youtube_token.json
+output/
+music/
+__pycache__/
+*.pyc
+.venv/
+.venv-tts/
+venv/
+env/
+history.json
+agent.log
+voice_samples/
+
+# Anything that could carry a credential. The YouTube token grants upload
+# access to the channel, so a stray copy is as dangerous as the original.
+*.env
+.env.*
+!.env.example
+*token*.json
+*credential*.json
+*secret*
+client_secret*.json
+*.pem
+*.key
