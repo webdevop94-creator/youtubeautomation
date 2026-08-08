@@ -171,12 +171,173 @@ function shareable(clip) {
   return out;
 }
 
+/** Each bone's rotation in the bind pose, read from the skinning data.
+ *
+ * A bone's own transform is not the rest pose: Mixamo bakes the first frame of
+ * whichever animation the character was downloaded with into the node
+ * transforms, so a character downloaded mid-crouch "rests" in a crouch. The
+ * inverse bind matrices are the one record of how the skeleton stood when the
+ * mesh was bound to it.
+ */
+function restPose(root) {
+  const map = new Map();
+  const pos = new THREE.Vector3(), scl = new THREE.Vector3();
+
+  // The body's skeleton, not whichever mesh happens to come first: hair and
+  // clothing are skinned separately and can carry their own partial skeletons.
+  let skeleton = null;
+  root.traverse(mesh => {
+    if (mesh.isSkinnedMesh && mesh.skeleton &&
+        (!skeleton || mesh.skeleton.bones.length > skeleton.bones.length)) {
+      skeleton = mesh.skeleton;
+    }
+  });
+  if (!skeleton) return map;
+
+  const { bones, boneInverses } = skeleton;
+  const world = boneInverses.map(m => m.clone().invert());
+  bones.forEach((bone, i) => {
+    const parent = bones.indexOf(bone.parent);
+    const local = parent < 0 ? world[i].clone()
+                             : world[parent].clone().invert().multiply(world[i]);
+    const q = new THREE.Quaternion();
+    local.decompose(pos, q, scl);
+    map.set(bone.name, q);
+  });
+  return map;
+}
+
+/** Re-express a clip against the target's own rest pose.
+ *
+ * Copying local rotations across characters assumes both rigs rest the same
+ * way, and they do not: one character rests with her head tilted back, so
+ * playing another's head rotation left her staring at the ceiling for the
+ * whole scene -- with her mouth aimed there too.
+ *
+ * What transfers is the movement away from rest, not the rotation itself. Rest
+ * poses that do match give an identity correction, so this is safe to apply to
+ * every bone rather than only the ones caught misbehaving.
+ */
+function toRestOf(clip, sourceRest, model) {
+  const out = shareable(clip);
+  const target = restPose(model);
+  const q = new THREE.Quaternion();
+
+  for (const track of out.tracks) {
+    if (!track.name.endsWith('.quaternion')) continue;
+    const bone = track.name.slice(0, -'.quaternion'.length);
+    const from = sourceRest.get(bone), to = target.get(bone);
+    if (!from || !to) continue;
+
+    const correction = to.clone().multiply(from.clone().invert());
+    const v = track.values;
+    for (let i = 0; i + 3 < v.length; i += 4) {
+      q.set(v[i], v[i + 1], v[i + 2], v[i + 3]).premultiply(correction);
+      v[i] = q.x; v[i + 1] = q.y; v[i + 2] = q.z; v[i + 3] = q.w;
+    }
+  }
+  return out;
+}
+
 // Whichever character is loaded, this is the animation it speaks with. Letting
 // each model play the clip it happened to be downloaded with means a character
 // downloaded with a dance clip dances through its dialogue.
 const TALK_CLIP = './assets/mixamo/char_talking.fbx';
 
-async function makeActor(avatarPath, clipSource, x, faceLeft, variant, extraClips) {
+/** Give a character a mouth that can open.
+ *
+ * Mixamo's auto-rigger strips the facial rig: not one of these models has a
+ * blend shape or a jaw bone, and the mouth is painted into the face texture.
+ * So the mouth is added as its own small mesh, sitting just off the face and
+ * parented to the head bone so it follows every turn and nod.
+ *
+ * It is hidden when the character is quiet, which uncovers the painted smile
+ * underneath -- open when speaking, smiling when not, which is how hand-drawn
+ * cartoons have always done it.
+ *
+ * Where the face is cannot be guessed. These characters range from ordinary
+ * proportions to a head half the height of the body, so a fixed depth either
+ * buries the mouth inside the skull or leaves it floating in front. Instead a
+ * ray is fired outward from inside the head and the mouth is placed wherever
+ * it leaves the surface.
+ */
+// Everything here is a fraction of the character's own head, never a fixed
+// size. These heads run from a seventh of the body to nearly a third, so a
+// mouth measured in centimetres fits one of them and swallows the next one's
+// face. The rig's Head-to-HeadTop_End distance gives the head's true length,
+// which the model's bounding box does not -- hair and a cap are in the box.
+const MOUTH = {
+  up: 0.15,        // above the head bone, towards the crown
+  width: 0.15,
+  height: 0.18,    // wide open
+  out: 0.03,       // clear of the skin, so it never z-fights
+  colour: 0x531d21,
+};
+
+function findBone(model, re) {
+  let found = null;
+  model.traverse(o => { if (!found && o.isBone && re.test(o.name)) found = o; });
+  return found;
+}
+
+// Measuring from the chin was tried and does not work: hair is skinned to the
+// head bone exactly like the chin is, so a fringe or a set of curlers becomes
+// the lowest "head" vertex and the mouth follows it down the neck. The head
+// bone to the crown bone is the one span the rig reports honestly.
+
+function addMouth(model, box) {
+  const head = findBone(model, /head$/i) || findBone(model, /head/i);
+  if (!head) return null;
+  model.updateMatrixWorld(true);
+
+  const headPos = new THREE.Vector3();
+  head.getWorldPosition(headPos);
+
+  const crown = findBone(model, /headtop/i);
+  const crownY = crown ? crown.getWorldPosition(new THREE.Vector3()).y
+                       : box.max.y * model.scale.y + model.position.y;
+  const span = Math.max(0.02, crownY - headPos.y);
+
+  const forward = new THREE.Vector3(0, 0, 1).applyEuler(model.rotation).normalize();
+  const origin = headPos.clone().setY(headPos.y + span * MOUTH.up);
+  // The outermost hit, not the first: the ray starts inside the head, so it
+  // leaves through eyeballs and teeth before it reaches the skin. Capped at
+  // roughly a head's width so a stray hair or a cap brim cannot pull the mouth
+  // out into the air.
+  const hits = new THREE.Raycaster(origin, forward, 0.001, span * 1.3)
+    .intersectObject(model, true).filter(h => h.object.isMesh);
+  const surface = hits.length ? hits[hits.length - 1].point
+                              : origin.clone().addScaledVector(forward, span * 0.5);
+
+  // A squashed sphere: rounded at the corners the way a drawn mouth is, and
+  // symmetrical, so nothing depends on which way its geometry was authored.
+  const mouth = new THREE.Mesh(
+    new THREE.SphereGeometry(0.5, 20, 14),
+    new THREE.MeshBasicMaterial({ color: MOUTH.colour }));
+  mouth.visible = false;
+  head.add(mouth);
+  mouth.position.copy(head.worldToLocal(
+    surface.clone().addScaledVector(forward, span * MOUTH.out)));
+
+  // Sit it square to the character rather than to the bone: Mixamo's head bone
+  // points up the neck, so its own axes would tip the mouth on its side.
+  const hq = new THREE.Quaternion(), mq = new THREE.Quaternion();
+  head.getWorldQuaternion(hq);
+  model.getWorldQuaternion(mq);
+  mouth.quaternion.copy(hq.invert().multiply(mq));
+
+  // The bone carries the model's scale, so undo it: sizes below are in world
+  // metres, derived from this character's own head.
+  mouth.userData.unit = span / (model.scale.x || 1);
+  return mouth;
+}
+
+// How far the pair angle in towards each other, in radians. Square to camera
+// reads as two people addressing the viewer; turned, as two people talking.
+const TURN = 0.42;
+
+async function makeActor(avatarPath, clipSource, x, faceLeft, variant, talk,
+                         turn = TURN) {
   const asset = await load(avatarPath);
   const model = rootOf(asset);
   asset.animations = asset.animations || model.animations || [];
@@ -184,9 +345,17 @@ async function makeActor(avatarPath, clipSource, x, faceLeft, variant, extraClip
   // Scale off the model's own height, not a fixed factor. Mixamo exports each
   // character in its own units, so a single constant makes one character
   // correct and the next one a giant standing beside it.
+  //
+  // Height is measured to the crown bone rather than the top of the bounding
+  // box, because the box contains hair: a character in curlers and a cap was
+  // scaled down until her face sat below everyone else's and the camera looked
+  // over the top of her head.
   const wanted = TARGET_HEIGHT * (variant ? VARIANT.scale : 1);
+  model.updateMatrixWorld(true);
   const box = new THREE.Box3().setFromObject(model);
-  const height = box.max.y - box.min.y;
+  const crown = findBone(model, /headtop/i);
+  const top = crown ? crown.getWorldPosition(new THREE.Vector3()).y : box.max.y;
+  const height = top - box.min.y;
   if (height > 0.0001) model.scale.setScalar(wanted / height);
 
   const morphMeshes = [];
@@ -215,8 +384,9 @@ async function makeActor(avatarPath, clipSource, x, faceLeft, variant, extraClip
   // Stand it on the floor: a rig whose origin sits at the hips rather than the
   // feet otherwise sinks into the ground or floats above it.
   model.position.set(x, -box.min.y * model.scale.y, 0);
-  model.rotation.y = faceLeft ? -0.42 : 0.42;
+  model.rotation.y = faceLeft ? -turn : turn;
   scene.add(model);
+  const mouth = addMouth(model, box);
   const gltf = asset;
 
   const mixer = new THREE.AnimationMixer(model);
@@ -229,7 +399,7 @@ async function makeActor(avatarPath, clipSource, x, faceLeft, variant, extraClip
   // are useless as keys, so clips are numbered by order instead.
   const clips = {};
   const own = (gltf.animations || []).filter(c => c.duration > 0.1).map(shareable);
-  const borrowed = (extraClips || []).map(shareable);
+  const borrowed = (talk ? talk.clips : []).map(c => toRestOf(c, talk.rest, model));
   if (own.length || borrowed.length) {
     // Borrowed clips come first so the shared talking animation wins the 'talk'
     // key: a character downloaded with a dance clip should still speak its
@@ -251,7 +421,7 @@ async function makeActor(avatarPath, clipSource, x, faceLeft, variant, extraClip
   const base = actions['talk'] || actions['idle'] || Object.values(actions)[0];
   if (base) base.play();
   return {
-    model, mixer, morphMeshes, actions, clips, current: base,
+    model, mixer, morphMeshes, actions, clips, mouth, current: base,
     timeOffset: variant ? VARIANT.timeOffset : 0,
   };
 }
@@ -269,12 +439,15 @@ window.__setup = async (cfg) => {
     scene.background = new THREE.Color(
       (ROOMS[cfg.room] || ROOMS.classroom).wall).convertSRGBToLinear();
 
-    const talk = (await load(cfg.clip || TALK_CLIP)).animations || [];
-    actors.push(await makeActor(actorA, clipSource, -1.05, false, false, talk));
+    const talkAsset = await load(cfg.clip || TALK_CLIP);
+    const talk = { clips: talkAsset.animations || [],
+                   rest: restPose(rootOf(talkAsset)) };
+    const turn = cfg.turn === undefined ? TURN : cfg.turn;
+    actors.push(await makeActor(actorA, clipSource, -1.05, false, false, talk, turn));
     // The second actor is disguised only when it is the same model as the
     // first; a genuinely different character needs no disguising.
     actors.push(await makeActor(actorB, clipSource, 1.05, true,
-                                actorB === actorA && cfg.varyB !== false, talk));
+                                actorB === actorA && cfg.varyB !== false, talk, turn));
 
     window.__clips = Object.keys(actors[0].actions);
     window.__ready = true;
@@ -304,6 +477,20 @@ window.__renderFrame = (t, speaker, level, shot) => {
       const d = mesh.morphTargetDictionary;
       if (d.mouthOpen !== undefined) mesh.morphTargetInfluences[d.mouthOpen] = open;
       if (d.mouthSmile !== undefined) mesh.morphTargetInfluences[d.mouthSmile] = talking ? 0.2 : 0.4;
+    }
+
+    if (a.mouth) {
+      // Below a whisper the mouth disappears and the painted smile shows
+      // through, so a pause reads as a pause rather than a held vowel.
+      a.mouth.visible = open > 0.06;
+      if (a.mouth.visible) {
+        const u = a.mouth.userData.unit;
+        // Wider as it opens, but not in step -- a mouth that scales evenly
+        // reads as a growing circle instead of a jaw coming down.
+        a.mouth.scale.set(MOUTH.width * (0.72 + 0.28 * open) * u,
+                          MOUTH.height * (0.18 + 0.82 * open) * u,
+                          MOUTH.width * 0.45 * u);
+      }
     }
   }
 
@@ -336,5 +523,17 @@ window.__info = () => ({
   ready: !!window.__ready, error: window.__error || null,
   clips: window.__clips || [],
   morphs: actors[0] ? Object.keys(actors[0].morphMeshes[0]?.morphTargetDictionary || {}) : [],
+  // Where each mouth ended up, against the head it was measured from. A mouth
+  // that never appears on camera is either missing or buried, and only these
+  // numbers say which.
+  mouths: actors.map(a => {
+    if (!a.mouth) return null;
+    const p = a.mouth.getWorldPosition(new THREE.Vector3());
+    const head = findBone(a.model, /head$/i);
+    const crown = findBone(a.model, /headtop/i);
+    const at = b => b ? +b.getWorldPosition(new THREE.Vector3()).y.toFixed(3) : null;
+    return { y: +p.y.toFixed(3), z: +p.z.toFixed(3),
+             head: at(head), crown: at(crown) };
+  }),
 });
 </script>

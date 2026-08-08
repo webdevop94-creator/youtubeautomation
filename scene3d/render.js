@@ -68,6 +68,8 @@ const CHROME = [
     actorA: job.actorA,
     actorB: job.actorB,
     varyB: job.varyB,
+    turn: job.turn,
+    clip: job.clip,
   });
   await page.waitForFunction('window.__ready === true || window.__error', { timeout: 120000 });
 
@@ -98,6 +100,6 @@ const CHROME = [
   console.log(JSON.stringify({
     out: job.out, frames, seconds: +secs.toFixed(1),
     fps_render: +(frames / secs).toFixed(1),
-    clips: info.clips, morphs: info.morphs,
+    clips: info.clips, morphs: info.morphs, mouths: info.mouths,
   }));
 })();

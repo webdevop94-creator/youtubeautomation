@@ -39,3 +39,7 @@ scene3d/job.json
 scene3d/job_*.json
 scene3d/peek_*.png
 scene3d/v_*.png
+scene3d/m_*.png
+scene3d/s_*.png
+scene3d/row_*.png
+scene3d/*.mp4

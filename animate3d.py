@@ -27,9 +27,13 @@ MODELS = ROOT / "assets" / "mixamo"
 
 # Characters that render correctly, in the order a video prefers them. Each is
 # a Mixamo download; they share one skeleton, so any of them can play any clip.
-# char_c.fbx is deliberately absent -- it loads without error but never appears
-# on camera.
-CAST = ["char_talking.fbx", "char_ty.fbx", "char_b.fbx"]
+#
+# Two are deliberately absent. char_c.fbx loads without error but never appears
+# on camera. char_b.fbx animates correctly from the neck down, but rests with
+# its head thrown back and keeps looking at the ceiling through the scene --
+# its bind pose differs from the others' in a way retargeting does not recover,
+# and a character talking at the ceiling is worse than one fewer character.
+CAST = ["char_talking.fbx", "char_ty.fbx"]
 
 # One room for the whole video. Changing room every beat reads as a different
 # scene each time rather than a conversation, so the camera moves instead.
