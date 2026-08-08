@@ -230,8 +230,22 @@ def classify(text: str, given: str = "") -> str:
 
 
 def safety_flags(text: str) -> list:
-    """Which blocked buckets this headline touches. Empty means safe to publish."""
+    """Which blocked buckets this headline touches. Empty means safe to publish.
+
+    Plurals are folded before matching. The lists were written in the singular,
+    so "5 deaths from flesh-eating bacteria" sailed past a filter that blocks
+    "death" -- and listing every inflection by hand is how that gap reappears.
+    """
     words = set(re.findall(r"[a-z]+", text.lower()))
+    # Cheap stemming: enough for the plural and -es forms that actually occur
+    # in headlines, without dragging in a stemmer library.
+    for word in list(words):
+        if word.endswith("es") and len(word) > 4:
+            words.add(word[:-2])
+        if word.endswith("s") and len(word) > 3:
+            words.add(word[:-1])
+        if word.endswith("ies") and len(word) > 4:
+            words.add(word[:-3] + "y")
     return [name for name, bad in BLOCKED_SETS.items() if words & bad]
 
 
@@ -536,15 +550,21 @@ def fetch_viral(geos: list = None, sections: list = None, limit: int = 8,
 
 
 def describe(topic: dict) -> str:
-    bits = [f"score {topic['score']}", topic["category"]]
-    if topic["geos"]:
+    """One-line summary. Tolerates hand-made topics, which carry none of the
+    scoring fields a discovered one does."""
+    bits = []
+    if topic.get("score") is not None:
+        bits.append(f"score {topic['score']}")
+    bits.append(topic.get("category") or "general")
+    if topic.get("geos"):
         bits.append(f"{len(topic['geos'])} countries: {','.join(topic['geos'][:5])}")
-    bits.append("+".join(topic["signal_sources"]))
-    if topic["traffic"]:
+    if topic.get("signal_sources"):
+        bits.append("+".join(topic["signal_sources"]))
+    if topic.get("traffic"):
         bits.append(f"{topic['traffic']:,}+ searches")
-    if topic["links"]:
+    if topic.get("links"):
         bits.append(f"{len(topic['links'])} readable links")
-    if topic["safety_flags"]:
+    if topic.get("safety_flags"):
         bits.append(f"FLAGGED: {','.join(topic['safety_flags'])}")
     return " | ".join(bits)
 

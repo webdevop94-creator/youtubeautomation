@@ -27,6 +27,11 @@ SAFETY_CASES = [
     ("Madonna and Blur producer William Orbit dies aged 69", True, "death"),
     ("Trump targets birthright citizenship. And, Iran aims to ban U.S. from "
      "Strait of Hormuz", True, "agent ranked this #2 on a public run"),
+    # Plurals: the lists are written singular, so these need stemming to match.
+    ("Louisiana reporting at least 5 deaths from flesh-eating bacteria",
+     True, "'deaths' vs 'death' -- ranked #4 on a live run"),
+    ("Police make three arrests after warehouse robberies", True, "plural crime"),
+    ("Two shootings reported overnight", True, "plural tragedy"),
 
     ("iPhone 18 Pro price: Here's how much more it could cost", False, "tech"),
     ("'Grand Theft Auto VI' Game To Debut Extended Look On Netflix This Month",

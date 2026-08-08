@@ -1,4 +1,4 @@
-﻿.env
+.env
 .youtube_token.json
 output/
 music/
@@ -27,3 +27,10 @@ story_test/
 client_secret*.json
 *.pem
 *.key
+
+# 3D assets: models aur three.js builds, MBs mein. Code commit hota hai,
+# binaries nahi — inhe Mixamo/three.js se dobara laya ja sakta hai.
+scene3d/assets/
+scene3d/node_modules/
+scene3d/*.mp4
+scene3d/job.json

@@ -205,6 +205,13 @@ GEN_STYLE = {
 GEN_NEGATIVE = "no text, no watermark, no letters, no logos, no captions"
 
 
+# One style sentence for the whole video. Every frame gets the identical
+# suffix, which is what makes unrelated scenes read as one piece.
+ANIMATION_STYLE = ("cinematic illustrated animation still, bold clean shapes, "
+                   "soft gradients, rich warm lighting, animated documentary "
+                   "look, no text, no watermark, no letters, no logos")
+
+
 def _gen_prompt(keywords: str, category: str) -> str:
     """Full scene description, unlike the stock query.
 
@@ -216,6 +223,8 @@ def _gen_prompt(keywords: str, category: str) -> str:
                      if w.lower() not in DROP)
     if not scene:
         scene = random.choice(_fallbacks(category))
+    if config.VISUAL_STYLE == "animation":
+        return f"{scene}, {ANIMATION_STYLE}"
     style = GEN_STYLE.get(category, GEN_STYLE["general"])
     return f"{scene}, {style}, {GEN_NEGATIVE}"
 

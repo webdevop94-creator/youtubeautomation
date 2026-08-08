@@ -16,6 +16,7 @@ from pathlib import Path
 import edge_tts
 
 import config
+import voice_eleven
 
 TICKS_PER_SECOND = 10_000_000  # edge-tts reports offsets in 100-nanosecond ticks
 MAX_LINE_CHARS = 40
@@ -46,7 +47,8 @@ def _split_sentence(sentence: dict) -> list:
 
 async def _synth_one(text: str, out_path: Path) -> list:
     communicate = edge_tts.Communicate(
-        text, config.VOICE, rate=config.VOICE_RATE, boundary="WordBoundary")
+        text, config.VOICE, rate=config.VOICE_RATE, pitch=config.VOICE_PITCH,
+        boundary="WordBoundary")
 
     words, sentences = [], []
     with open(out_path, "wb") as fh:
@@ -123,8 +125,19 @@ def narrate(beats: list, work_dir: Path, label: str) -> dict:
 
     Returns {"audio", "srt", "total", "beats": [{"text","keywords","duration"}]}
     """
-    speaker = config.KOKORO_VOICE if config.TTS_ENGINE == "kokoro" else config.VOICE
-    print(f"[4/7] Voice bana raha hoon ({label}, {config.TTS_ENGINE}: {speaker})...")
+    if config.TTS_ENGINE == "kokoro":
+        speaker = config.KOKORO_VOICE
+    elif config.TTS_ENGINE == "eleven" and voice_eleven.available():
+        speaker = voice_eleven.voice_for(label)
+        chars = voice_eleven.estimate_characters(beats)
+        print(f"[4/7] Voice bana raha hoon ({label}, elevenlabs, "
+              f"~{chars:,} characters)...")
+        speaker = None
+    else:
+        speaker = config.VOICE
+    if speaker is not None:
+        print(f"[4/7] Voice bana raha hoon ({label}, {config.TTS_ENGINE}: "
+              f"{speaker})...")
     audio_dir = work_dir / f"audio_{label}"
     audio_dir.mkdir(parents=True, exist_ok=True)
 
@@ -141,8 +154,21 @@ def narrate(beats: list, work_dir: Path, label: str) -> dict:
         nonlocal offset
         for i, beat in enumerate(beats):
             part = files[i]
+            words = []
             if config.TTS_ENGINE == "kokoro":
-                words = []
+                pass                      # already synthesised in one batch
+            elif config.TTS_ENGINE == "eleven" and voice_eleven.available():
+                try:
+                    voice_eleven.synth(beat["text"], part, label)
+                except voice_eleven.QuotaGone:
+                    # Credits gone mid-video. Finish on edge-tts rather than
+                    # abandon a video that is most of the way done.
+                    print("    [!] ElevenLabs credits khatam — "
+                          "baaki beats edge-tts par")
+                    words = await _synth_one(beat["text"], part)
+                except RuntimeError as exc:
+                    print(f"    [!] ElevenLabs fail ({str(exc)[:70]}) — edge-tts par")
+                    words = await _synth_one(beat["text"], part)
             else:
                 words = await _synth_one(beat["text"], part)
             seconds = _duration(part)

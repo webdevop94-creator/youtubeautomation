@@ -15,6 +15,7 @@ Then schedule it:      powershell -File setup_schedule.ps1
 """
 import argparse
 import json
+import random
 import shutil
 import socket
 import sys
@@ -38,8 +39,31 @@ MIN_ARTICLES = 1
 MIN_FACT_DEPTH = 7
 
 
+def story_writer_kinds() -> list:
+    """Imported lazily so --help works even if a provider key is missing."""
+    import story_writer
+
+    return list(story_writer.KINDS)
+
+
 class NetworkDown(Exception):
     """The internet went away. Not the topic's fault, so it must not count."""
+
+
+def is_upload_limit(exc: Exception) -> bool:
+    """YouTube's per-channel daily video cap, distinct from the API quota.
+
+    Retrying cannot help: the cap is on the channel for the whole day, so a
+    fresh video would only burn another ten minutes of rendering and fail at
+    the same line. The run stops instead, leaving finished files on disk.
+    """
+    text = f"{type(exc).__name__} {exc}"
+    return ("uploadLimitExceeded" in text
+            or "exceeded the number of videos" in text)
+
+
+class UploadLimit(Exception):
+    """Channel cannot accept more uploads today."""
 
 
 def online(host: str = "news.google.com") -> bool:
@@ -139,6 +163,38 @@ def log(message: str, echo: bool = True) -> None:
         pass
 
 
+def build_animation(args, kind: str) -> dict:
+    """Original content -- jokes, facts, riddles, a short story -- then video.
+
+    Half the news pipeline is skipped because there is nothing to research:
+    the content is written, not reported. What survives is everything that
+    decides whether the video is watchable: Devanagari, length, visuals, voice.
+    """
+    import story_writer
+
+    script = story_writer.write_story(kind)
+
+    # A joke set is only fresh if it is not the joke set from yesterday.
+    fake_topic = {"title": script["title"], "category": script["category"],
+                  "related": [], "links": []}
+    duplicate, previous = history.is_duplicate(fake_topic)
+    if duplicate:
+        return {"ok": False, "reason": f"bahut milta-julta pehle bana tha: {previous[:50]}"}
+
+    work_dir = config.OUTPUT_DIR / (
+        f"{datetime.now():%Y-%m-%d_%H%M}_{kind}_"
+        f"{pipeline.slugify(script['title'], fallback=kind)}")
+    work_dir.mkdir(parents=True, exist_ok=True)
+    (work_dir / "script.json").write_text(
+        json.dumps(script, ensure_ascii=False, indent=2), encoding="utf-8")
+    (work_dir / "script.txt").write_text(
+        story_writer.story_as_text(script), encoding="utf-8")
+    log(f"  title     : {script['title']}")
+    log(f"  folder    : {work_dir.name}")
+
+    return _render_and_upload(script, fake_topic, work_dir, args)
+
+
 def build_one(topic: dict, args) -> dict:
     """Research, write, render and upload a single topic.
 
@@ -160,7 +216,7 @@ def build_one(topic: dict, args) -> dict:
             raise NetworkDown("research ke dauraan internet chala gaya")
         return {"ok": False,
                 "reason": f"sources patle hain ({len(facts['articles'])} articles, "
-                          f"richness {richness}) — is topic par factual script nahi banegi"}
+                          f"richness {richness}) â€” is topic par factual script nahi banegi"}
 
     script = script_writer.write_script(facts, n_long_beats=depth,
                                         category=topic.get("category", "general"))
@@ -180,6 +236,12 @@ def build_one(topic: dict, args) -> dict:
     log(f"  title     : {script['title']}")
     log(f"  folder    : {work_dir.name}")
 
+    return _render_and_upload(script, topic, work_dir, args)
+
+
+def _render_and_upload(script: dict, topic: dict, work_dir, args) -> dict:
+    """Voice, visuals, video, thumbnail, upload, history. Shared by both modes:
+    once a script exists, nothing downstream cares where it came from."""
     outputs = {}
     if args.format in ("both", "long"):
         outputs["long"] = pipeline.make_video(script, work_dir, False, "long",
@@ -210,10 +272,17 @@ def build_one(topic: dict, args) -> dict:
     else:
         import youtube_upload
         privacy = args.privacy or config.UPLOAD_PRIVACY
-        url = youtube_upload.upload(
-            primary_path, script["title"], description, script.get("tags", []),
-            thumb, privacy=privacy,
-            category=youtube_upload.category_id(topic.get("category", "")))
+        try:
+            url = youtube_upload.upload(
+                primary_path, script["title"], description, script.get("tags", []),
+                thumb, privacy=privacy,
+                category=youtube_upload.category_id(topic.get("category", "")))
+        except Exception as exc:
+            if is_upload_limit(exc):
+                log("  [X] YouTube ki daily upload limit lag gayi. Video bani "
+                    f"hui hai: {work_dir}")
+                raise UploadLimit(str(exc)[:160]) from exc
+            raise
         (work_dir / "uploaded.txt").write_text(url, encoding="utf-8")
         log(f"  uploaded  : {url}  ({privacy})")
 
@@ -237,17 +306,73 @@ def build_one(topic: dict, args) -> dict:
     return {"ok": True, "title": script["title"], "folder": work_dir, "url": url}
 
 
+def run_animation(args) -> int:
+    """Make `args.count` original videos. No trending discovery at all.
+
+    Kinds rotate rather than repeat: five joke videos in one morning would be
+    five videos of the same thing, and the duplicate guard would reject most
+    of them anyway.
+    """
+    published, attempts = [], 0
+    budget = args.count + config.MAX_TOPIC_ATTEMPTS
+    kinds = list(config.ANIMATION_KINDS)
+
+    while len(published) < args.count and attempts < budget:
+        kind = args.kind or kinds[len(published) % len(kinds)]
+        attempts += 1
+        log(f"\n[video {len(published) + 1}/{args.count}  "
+            f"attempt {attempts}/{budget}  kind={kind}]")
+        try:
+            result = build_animation(args, kind)
+        except UploadLimit as exc:
+            log(f"  [X] {exc}")
+            log("  Baaki videos nahi banaunga — wo bhi isi limit par rukengi.")
+            log("  Limit roz reset hoti hai. Kal ka run normal chalega.")
+            return _report(published)
+        except Exception as exc:
+            if isinstance(exc, NetworkDown) or is_network_error(exc):
+                log(f"  [!] network problem: {type(exc).__name__}")
+                if wait_for_network():
+                    continue
+                log("\n" + "-" * 68)
+                log("FAIL: internet down tha.")
+                return _report(published)
+            log(f"  [X] {type(exc).__name__}: {exc}")
+            log(traceback.format_exc(), echo=False)
+            continue
+
+        if result["ok"]:
+            published.append(result)
+        else:
+            log(f"  [skip] {result['reason']}")
+
+    return _report(published)
+
+
 def run(args) -> int:
     config.OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     prune_old_outputs()
+
+    if config.CONTENT_MODE == "animation":
+        log(f"AGENT RUN start  (animation, {args.count} videos, "
+            f"privacy={args.privacy or config.UPLOAD_PRIVACY})")
+        return run_animation(args)
     log("=" * 68, echo=False)
     log(f"AGENT RUN start  (privacy={args.privacy or config.UPLOAD_PRIVACY}, "
         f"format={args.format}, upload={not args.no_upload})")
 
-    topics = viral.fetch_viral(limit=25)
-    if not topics:
-        log("[X] Koi viral topic nahi mila. Network ya feeds down.")
-        return 1
+    if args.topic:
+        # A named topic still goes through research and every guard; only the
+        # discovery step is replaced.
+        topics = [{"title": args.topic, "source": "manual", "related": [],
+                   "links": [], "articles": [],
+                   "category": args.category or "general"}]
+        log(f"  manual topic: {args.topic}")
+    else:
+        topics = viral.fetch_viral(limit=25)
+        if not topics:
+            log("[X] Koi viral topic nahi mila. Network ya feeds down.")
+            return 1
 
     topics = history.filter_new(topics)
     if not topics:
@@ -262,7 +387,6 @@ def run(args) -> int:
         log("\n--dry-run: yahin ruk raha hoon, koi video nahi banegi.")
         return 0
 
-    published, attempts = [], 0
     for topic in topics:
         if len(published) >= args.count or attempts >= config.MAX_TOPIC_ATTEMPTS:
             break
@@ -277,6 +401,10 @@ def run(args) -> int:
             try:
                 result = build_one(topic, args)
                 break
+            except UploadLimit as exc:
+                log(f"  [X] {exc}")
+                log("  Aage ke topics nahi banaunga — wo bhi isi limit par rukenge.")
+                return _report(published)
             except Exception as exc:
                 if isinstance(exc, NetworkDown) or is_network_error(exc):
                     log(f"  [!] network problem: {type(exc).__name__}: "
@@ -299,6 +427,10 @@ def run(args) -> int:
         else:
             log(f"  [skip] {result['reason']}")
 
+    return _report(published)
+
+
+def _report(published: list) -> int:
     log("\n" + "-" * 68)
     if published:
         log(f"DONE: {len(published)} video(s) publish/render hui")
@@ -324,6 +456,12 @@ def main() -> None:
     parser.add_argument("--privacy", choices=["private", "unlisted", "public"],
                         help="sirf is run ke liye privacy override karo; "
                              ".env ka UPLOAD_PRIVACY waise ka waisa rehta hai")
+    parser.add_argument("--topic", help="apna topic do, trending discovery skip karo")
+    parser.add_argument("--kind", choices=sorted(story_writer_kinds()),
+                        help="animation mode: jokes / facts / riddles / stories "
+                             "(na do to roz badal-badal kar chunega)")
+    parser.add_argument("--category", help="topic ki category (script tone + "
+                                           "visuals ismein se chunte hain)")
     parser.add_argument("--history", action="store_true",
                         help="ab tak kya cover hua, wo dikhao aur exit")
     args = parser.parse_args()

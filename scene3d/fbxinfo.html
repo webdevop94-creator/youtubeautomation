@@ -1,0 +1,49 @@
+<meta charset="utf-8">
+<script type="importmap">
+{ "imports": {
+  "three": "./assets/three.module.js",
+  "three/addons/": "./assets/addons/",
+  "fflate": "./assets/addons/libs/fflate.module.js"
+} }
+</script>
+<script type="module">
+import * as THREE from 'three';
+import { FBXLoader } from 'three/addons/loaders/FBXLoader.js';
+
+// What the Mixamo downloads actually contain: a skinned character, an
+// animation clip, both, and whether the face carries morph targets. Mixamo
+// characters and animations share one rig, so anything here needs no
+// retargeting -- which is what makes this route worth taking.
+const FILES = ['mixamo/char_talking.fbx', 'mixamo/anim_secret.fbx'];
+const loader = new FBXLoader();
+const load = p => new Promise((res, rej) => loader.load(p, res, undefined, rej));
+
+(async () => {
+  const out = [];
+  for (const f of FILES) {
+    try {
+      const obj = await load('./assets/' + f);
+      let meshes = 0, bones = 0, skinned = 0;
+      const morphs = new Set();
+      obj.traverse(o => {
+        if (o.isSkinnedMesh) skinned++;
+        if (o.isMesh) {
+          meshes++;
+          if (o.morphTargetDictionary) Object.keys(o.morphTargetDictionary).forEach(k => morphs.add(k));
+        }
+        if (o.isBone) bones++;
+      });
+      const box = new THREE.Box3().setFromObject(obj);
+      out.push({
+        file: f, meshes, skinned, bones,
+        height: +(box.max.y - box.min.y).toFixed(2),
+        clips: (obj.animations || []).map(a => ({ name: a.name, dur: +a.duration.toFixed(2) })),
+        morphs: [...morphs].slice(0, 10), morphCount: morphs.size,
+        boneSample: (() => { const b = []; obj.traverse(o => { if (o.isBone && b.length < 8) b.push(o.name); }); return b; })(),
+      });
+    } catch (e) { out.push({ file: f, error: String(e && e.message || e).slice(0, 140) }); }
+  }
+  window.__out = out;
+  window.__done = true;
+})();
+</script>

@@ -39,10 +39,26 @@ TTS_ENGINE = os.getenv("TTS_ENGINE", "edge").strip().lower()
 # hi-IN-MadhurNeural (male) / hi-IN-SwaraNeural (female) handle Hinglish well.
 VOICE = os.getenv("VOICE", "hi-IN-MadhurNeural").strip()
 VOICE_RATE = os.getenv("VOICE_RATE", "+8%").strip()
+# Pitch shift, e.g. "+25Hz". edge-tts has no cartoon voice for Hindi -- there
+# are only Madhur and Swara -- so a lighter, faster read is how you get one.
+VOICE_PITCH = os.getenv("VOICE_PITCH", "+0Hz").strip()
 
 # Kokoro Hindi voices: hm_omega, hm_psi (male) | hf_alpha, hf_beta (female)
 KOKORO_VOICE = os.getenv("KOKORO_VOICE", "hm_omega").strip()
 KOKORO_SPEED = float(os.getenv("KOKORO_SPEED", "1.0"))
+
+# --- ElevenLabs ------------------------------------------------------------
+# Best Hindi of anything tried here, but billed per character: the free tier
+# is 10,000 a month, about five videos. voice.py falls back to edge-tts the
+# moment the credits run out, so a dry account slows the channel down rather
+# than stopping it.
+ELEVEN_API_KEY = os.getenv("ELEVEN_API_KEY", "").strip()
+ELEVEN_VOICE = os.getenv("ELEVEN_VOICE", "EXAVITQu4vr4xnSDxMaL").strip()      # Sarah
+ELEVEN_VOICE_SHORTS = os.getenv("ELEVEN_VOICE_SHORTS",
+                                "TX3LPaxmHKxFdv7VOQHJ").strip()               # Liam
+# Low stability + high style = performance rather than narration.
+ELEVEN_STABILITY = float(os.getenv("ELEVEN_STABILITY", "0.35"))
+ELEVEN_STYLE = float(os.getenv("ELEVEN_STYLE", "0.70"))
 
 # --- Video ----------------------------------------------------------------
 FPS = int(os.getenv("FPS", "30"))
@@ -88,10 +104,23 @@ ALLOW_SENSITIVE = os.getenv("ALLOW_SENSITIVE", "false").strip().lower() == "true
 ALLOWED_CATEGORIES = _csv("ALLOWED_CATEGORIES", "")
 
 # --- Visuals ----------------------------------------------------------------
-# Generate each beat's visual instead of searching stock. Stock cannot
-# illustrate a specific story -- a beat about FIFA's president facing revolt
-# returned footage of a man wading in the sea. Set false to go back to Pexels.
-USE_AI_VISUALS = os.getenv("USE_AI_VISUALS", "true").strip().lower() == "true"
+# Generated stills instead of stock video. OFF by default and it should stay
+# off: a still with a slow pan is not a video, and the channel owner has said
+# so twice. The earlier argument for turning it on -- that stock never matched
+# the narration -- turned out to be a truncation bug in visuals._clean_query,
+# not a limit of the stock library.
+#
+# Only worth enabling for a subject stock genuinely does not cover.
+USE_AI_VISUALS = os.getenv("USE_AI_VISUALS", "false").strip().lower() == "true"
+
+# "photo"     generated stills that look like photography (default)
+# "animation" illustrated frames in one consistent style
+#
+# Animation only works for subjects whose scenes do not need a recurring
+# character. Holding a character across scenes was tested twice and failed
+# both times -- the same frozen description and seed produced a different
+# character every scene. Style, unlike character, holds fine.
+VISUAL_STYLE = os.getenv("VISUAL_STYLE", "photo").strip().lower()
 
 # --- Length -----------------------------------------------------------------
 # Longer is not better: a padded four-minute video loses viewers a tight
@@ -100,8 +129,22 @@ USE_AI_VISUALS = os.getenv("USE_AI_VISUALS", "true").strip().lower() == "true"
 # minute cap rather than being guessed separately.
 MAX_VIDEO_MINUTES = float(os.getenv("MAX_VIDEO_MINUTES", "3"))
 WORDS_PER_MINUTE = 145
-WORDS_PER_BEAT = 65
-MAX_LONG_BEATS = max(4, int(MAX_VIDEO_MINUTES * WORDS_PER_MINUTE / WORDS_PER_BEAT))
+
+# Everything about length comes from the target runtime, including how long a
+# beat may be. Fixing beat length separately is what made a 1-minute target
+# still produce a 1.8-minute video: the beat floor times the fixed 65-word
+# beat overshot the total before the total was ever consulted.
+TARGET_WORDS = int(MAX_VIDEO_MINUTES * WORDS_PER_MINUTE)
+MAX_LONG_BEATS = max(3, min(12, round(TARGET_WORDS / 60)))
+WORDS_PER_BEAT = max(25, round(TARGET_WORDS / MAX_LONG_BEATS))
+
+# --- Content mode -----------------------------------------------------------
+# "news"      trending topic -> researched, fact-checked script
+# "animation" original jokes / facts / riddles / stories, no research
+CONTENT_MODE = os.getenv("CONTENT_MODE", "news").strip().lower()
+
+# Which kinds the animation mode cycles through when --kind is not given.
+ANIMATION_KINDS = _csv("ANIMATION_KINDS", "jokes,facts,riddles,stories")
 
 # --- Autonomous agent (agent.py) ------------------------------------------
 # How many videos one scheduled run may publish.

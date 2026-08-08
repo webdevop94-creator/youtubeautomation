@@ -138,10 +138,10 @@ Return JSON with exactly this shape:
   "your_take": "One sentence prompting the channel owner to add their own opinion here"
 }}
 
-long_beats: AT MOST {n_long} beats, each 55 to 80 words.
-  The long_beats narration must total AT LEAST {min_words} words — that is the
-  single most important length rule. A beat of 25 words is far too short. Each beat
-  is a short paragraph of 4 to 6 sentences, not one line.
+long_beats: AT MOST {n_long} beats, each {beat_lo} to {beat_hi} words.
+  The long_beats narration must total AT LEAST {min_words} words and MUST NOT
+  exceed {max_words} words — the video has a fixed runtime and overshooting it
+  is as wrong as undershooting.
   Beat 1 = hook. Beat 2 = context. Middle beats = the actual news, one NEW point each.
   Second-last beat = why it matters for the viewer. Last beat = call to action.
   Reach the word count with real detail from the sources above — names, figures,
@@ -621,12 +621,15 @@ def write_script(facts: dict, n_long_beats: int = 12, category: str = "general")
     print(f"[3/7] Script likh raha hoon ({chain})...")
 
     category = category if category in CATEGORY_ANGLES else "general"
-    # fact_depth() already capped the beat count at what the sources support,
-    # so asking for 45 words per allowed beat cannot push the model into filler.
-    min_words = n_long_beats * 45
+    # Beat length follows the runtime target, not the other way round.
+    beat_words = config.WORDS_PER_BEAT
+    min_words = int(n_long_beats * beat_words * 0.8)
+    max_words = int(n_long_beats * beat_words * 1.2)
     user_prompt = USER_TEMPLATE.format(
         facts=research.facts_prompt_block(facts), n_long=n_long_beats,
-        category=category, angle=CATEGORY_ANGLES[category], min_words=min_words)
+        category=category, angle=CATEGORY_ANGLES[category],
+        beat_lo=int(beat_words * 0.8), beat_hi=int(beat_words * 1.2),
+        min_words=min_words, max_words=max_words)
     messages = [{"role": "system", "content": SYSTEM},
                 {"role": "user", "content": user_prompt}]
 
