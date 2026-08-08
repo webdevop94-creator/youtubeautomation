@@ -34,3 +34,8 @@ scene3d/assets/
 scene3d/node_modules/
 scene3d/*.mp4
 scene3d/job.json
+
+# Scratch jobs and preview stills from tuning the scene.
+scene3d/job_*.json
+scene3d/peek_*.png
+scene3d/v_*.png

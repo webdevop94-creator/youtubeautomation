@@ -123,7 +123,8 @@ def tidy(work_dir: Path) -> None:
             freed += part.stat().st_size
             part.unlink(missing_ok=True)
 
-    for folder in ("clips_long", "clips_shorts", "audio_long", "audio_shorts"):
+    for folder in ("clips_long", "clips_shorts", "audio_long", "audio_shorts",
+                   "scene3d_long", "scene3d_shorts"):
         target = work_dir / folder
         if target.is_dir():
             freed += sum(f.stat().st_size for f in target.rglob("*") if f.is_file())

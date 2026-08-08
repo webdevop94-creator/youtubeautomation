@@ -101,13 +101,18 @@ key.shadow.camera.top = 12; key.shadow.camera.bottom = -12;
 scene.add(key);
 
 // --- loading --------------------------------------------------------------
-const gltfLoader = new GLTFLoader();
-const fbxLoader = new FBXLoader();
-const load = p => new Promise((res, rej) =>
-  (p.endsWith('.fbx') ? fbxLoader : gltfLoader).load(p, res, undefined, rej));
+// A fresh loader per file, deliberately. FBXLoader keeps its parse state in
+// module scope, so loading a second FBX through the same instance hands it the
+// first file's textures -- two different characters render as the same one,
+// and the file on disk looks like the culprit when it is not.
+const load = p => new Promise((res, rej) => {
+  const loader = p.endsWith('.fbx') ? new FBXLoader() : new GLTFLoader();
+  loader.load(p, res, undefined, rej);
+});
 
-// Mixamo exports in centimetres; the rooms here are built in metres.
-const MIXAMO_SCALE = 0.01;
+// How tall a character stands, in metres -- the rooms are built in metres,
+// while Mixamo exports each character in units of its own choosing.
+const TARGET_HEIGHT = 1.6;
 
 /** Move a clip from the source rig onto a target rig.
  *
@@ -153,14 +158,36 @@ function rootOf(asset) {
  */
 const VARIANT = { scale: 0.88, hue: 0.42, timeOffset: 1.7 };
 
-async function makeActor(avatarPath, clipSource, x, faceLeft, tint, variant) {
+/** Make a Mixamo clip safe to play on a different Mixamo character.
+ *
+ * Every Mixamo character shares one skeleton and one set of bone names, so
+ * rotations transfer as they are. Positions do not: each character is exported
+ * in its own units, so the hips track moves a short character kilometres. Drop
+ * the position tracks and the clip becomes portable.
+ */
+function shareable(clip) {
+  const out = clip.clone();
+  out.tracks = out.tracks.filter(t => !t.name.endsWith('.position'));
+  return out;
+}
+
+// Whichever character is loaded, this is the animation it speaks with. Letting
+// each model play the clip it happened to be downloaded with means a character
+// downloaded with a dance clip dances through its dialogue.
+const TALK_CLIP = './assets/mixamo/char_talking.fbx';
+
+async function makeActor(avatarPath, clipSource, x, faceLeft, variant, extraClips) {
   const asset = await load(avatarPath);
   const model = rootOf(asset);
   asset.animations = asset.animations || model.animations || [];
 
-  const isFbx = avatarPath.endsWith('.fbx');
-  const sizeScale = variant ? MIXAMO_SCALE * VARIANT.scale : MIXAMO_SCALE;
-  if (isFbx) model.scale.setScalar(sizeScale);
+  // Scale off the model's own height, not a fixed factor. Mixamo exports each
+  // character in its own units, so a single constant makes one character
+  // correct and the next one a giant standing beside it.
+  const wanted = TARGET_HEIGHT * (variant ? VARIANT.scale : 1);
+  const box = new THREE.Box3().setFromObject(model);
+  const height = box.max.y - box.min.y;
+  if (height > 0.0001) model.scale.setScalar(wanted / height);
 
   const morphMeshes = [];
   model.traverse(o => {
@@ -185,7 +212,9 @@ async function makeActor(avatarPath, clipSource, x, faceLeft, tint, variant) {
       }
     }
   });
-  model.position.set(x, 0, 0);
+  // Stand it on the floor: a rig whose origin sits at the hips rather than the
+  // feet otherwise sinks into the ground or floats above it.
+  model.position.set(x, -box.min.y * model.scale.y, 0);
   model.rotation.y = faceLeft ? -0.42 : 0.42;
   scene.add(model);
   const gltf = asset;
@@ -198,9 +227,18 @@ async function makeActor(avatarPath, clipSource, x, faceLeft, tint, variant) {
   // an A-pose skeleton is where this broke repeatedly.
   // Mixamo names every clip "mixamo.com" and adds an empty "Take 001"; both
   // are useless as keys, so clips are numbered by order instead.
-  const own = (gltf.animations || []).filter(c => c.duration > 0.1);
-  if (own.length) {
-    own.forEach((clip, i) => { actions[i === 0 ? 'talk' : 'clip' + i] = mixer.clipAction(clip); });
+  const clips = {};
+  const own = (gltf.animations || []).filter(c => c.duration > 0.1).map(shareable);
+  const borrowed = (extraClips || []).map(shareable);
+  if (own.length || borrowed.length) {
+    // Borrowed clips come first so the shared talking animation wins the 'talk'
+    // key: a character downloaded with a dance clip should still speak its
+    // lines rather than dance through them.
+    [...borrowed, ...own].forEach((clip, i) => {
+      const key = i === 0 ? 'talk' : 'clip' + i;
+      clips[key] = clip;
+      actions[key] = mixer.clipAction(clip);
+    });
   } else {
     for (const clip of clipSource.animations) {
       try {
@@ -213,7 +251,7 @@ async function makeActor(avatarPath, clipSource, x, faceLeft, tint, variant) {
   const base = actions['talk'] || actions['idle'] || Object.values(actions)[0];
   if (base) base.play();
   return {
-    model, mixer, morphMeshes, actions, current: base,
+    model, mixer, morphMeshes, actions, clips, current: base,
     timeOffset: variant ? VARIANT.timeOffset : 0,
   };
 }
@@ -231,10 +269,12 @@ window.__setup = async (cfg) => {
     scene.background = new THREE.Color(
       (ROOMS[cfg.room] || ROOMS.classroom).wall).convertSRGBToLinear();
 
-    actors.push(await makeActor(actorA, clipSource, -1.05, false, null, false));
-    // The second actor is varied unless a genuinely different model was given.
-    actors.push(await makeActor(actorB, clipSource, 1.05, true, null,
-                                cfg.varyB !== false));
+    const talk = (await load(cfg.clip || TALK_CLIP)).animations || [];
+    actors.push(await makeActor(actorA, clipSource, -1.05, false, false, talk));
+    // The second actor is disguised only when it is the same model as the
+    // first; a genuinely different character needs no disguising.
+    actors.push(await makeActor(actorB, clipSource, 1.05, true,
+                                actorB === actorA && cfg.varyB !== false, talk));
 
     window.__clips = Object.keys(actors[0].actions);
     window.__ready = true;
@@ -269,13 +309,20 @@ window.__renderFrame = (t, speaker, level, shot) => {
 
   // Framing: characters should fill the frame the way they do on a cartoon
   // channel, not stand small in a wide room.
+  //
+  // A camera's field of view is vertical, so a portrait frame sees barely a
+  // third of the width a landscape one does. A Short therefore holds whoever
+  // is speaking, from further back: the two-shot that reads well in 16:9 puts
+  // both characters outside a 9:16 frame entirely.
   const sway = Math.sin(t * 0.25) * 0.18;
-  if (shot === 'left') {
-    camera.position.set(-1.0 + sway * 0.4, 1.35, 1.55);
-    camera.lookAt(-1.05, 1.25, 0);
-  } else if (shot === 'right') {
-    camera.position.set(1.0 + sway * 0.4, 1.35, 1.55);
-    camera.lookAt(1.05, 1.25, 0);
+  const portrait = W < H;
+  const view = portrait ? (speaker ? 'right' : 'left') : shot;
+
+  if (view === 'left' || view === 'right') {
+    const x = view === 'left' ? -1.05 : 1.05;
+    camera.position.set(x * 0.95 + sway * 0.4, portrait ? 1.10 : 1.35,
+                        portrait ? 2.6 : 1.55);
+    camera.lookAt(x, portrait ? 0.85 : 1.25, 0);
   } else {
     camera.position.set(sway, 1.30, 2.9);
     camera.lookAt(0, 1.0, 0);

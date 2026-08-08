@@ -115,11 +115,16 @@ USE_AI_VISUALS = os.getenv("USE_AI_VISUALS", "false").strip().lower() == "true"
 
 # "photo"     generated stills that look like photography (default)
 # "animation" illustrated frames in one consistent style
+# "3d"        real 3D cartoon characters acting the beats out (scene3d/)
 #
 # Animation only works for subjects whose scenes do not need a recurring
 # character. Holding a character across scenes was tested twice and failed
 # both times -- the same frozen description and seed produced a different
 # character every scene. Style, unlike character, holds fine.
+#
+# "3d" is the one that does hold a character, because it is the same model
+# every frame rather than a fresh guess. It costs about two minutes of
+# rendering per minute of video and needs node plus Chrome.
 VISUAL_STYLE = os.getenv("VISUAL_STYLE", "photo").strip().lower()
 
 # --- Length -----------------------------------------------------------------

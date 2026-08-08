@@ -59,7 +59,16 @@ const CHROME = [
   await page.goto(`http://127.0.0.1:${port}/scene.html?w=${job.width}&h=${job.height}`,
                   { waitUntil: 'networkidle0', timeout: 120000 });
 
-  await page.evaluate(cfg => window.__setup(cfg), { room: job.room || 'classroom' });
+  // The whole job goes to the page, not just the room. Passing a hand-picked
+  // subset here meant actorA/actorB never arrived and the page quietly fell
+  // back to its default model, so every character came out looking the same
+  // no matter which file the job named.
+  await page.evaluate(cfg => window.__setup(cfg), {
+    room: job.room || 'classroom',
+    actorA: job.actorA,
+    actorB: job.actorB,
+    varyB: job.varyB,
+  });
   await page.waitForFunction('window.__ready === true || window.__error', { timeout: 120000 });
 
   const info = await page.evaluate('window.__info()');

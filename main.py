@@ -17,9 +17,11 @@ import json
 import re
 import subprocess
 import sys
+import zlib
 from datetime import datetime
 from pathlib import Path
 
+import animate3d
 import config
 import research
 import script_writer
@@ -79,12 +81,32 @@ def chapter_list(narration: dict) -> list:
     return chapters[:10]
 
 
+def fetch_visuals(script: dict, narration: dict, work_dir: Path, vertical: bool,
+                  label: str) -> list:
+    """Pictures for the beats: 3D characters if asked for, else stock."""
+    category = script.get("category", "general")
+    if config.VISUAL_STYLE == "3d":
+        # A stable seed per title, so a re-render reproduces the same cast and
+        # room while the next video gets a different pair. Python's own hash()
+        # is salted per process and would not.
+        seed = zlib.crc32(script.get("title", label).encode("utf-8"))
+        try:
+            return animate3d.fetch_visuals(
+                narration["beats"], work_dir, vertical, label, category,
+                audio=narration["audio"], seed=seed)
+        except (animate3d.Unavailable, RuntimeError, OSError,
+                subprocess.SubprocessError) as exc:
+            # Falling back beats failing: a stock video still publishes.
+            print(f"    [!] 3D render nahi hua ({exc}); stock par gir raha hoon")
+    return visuals.fetch_visuals(narration["beats"], work_dir, vertical, label,
+                                 category)
+
+
 def make_video(script: dict, work_dir: Path, vertical: bool, label: str,
                burn_subs: bool) -> tuple:
     beats = script["shorts_beats"] if vertical else script["long_beats"]
     narration = voice.narrate(beats, work_dir, label)
-    assets = visuals.fetch_visuals(narration["beats"], work_dir, vertical, label,
-                                   script.get("category", "general"))
+    assets = fetch_visuals(script, narration, work_dir, vertical, label)
     path = video_mod.build(narration, assets, work_dir, vertical, label, burn_subs)
     return path, narration, assets
 
