@@ -10,7 +10,11 @@ venv/
 env/
 history.json
 agent.log
+
+# Throwaway comparison artefacts from tuning voices, visuals and motion.
 voice_samples/
+compare/
+story_test/
 
 # Anything that could carry a credential. The YouTube token grants upload
 # access to the channel, so a stray copy is as dangerous as the original.

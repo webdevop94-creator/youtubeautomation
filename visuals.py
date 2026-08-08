@@ -1,6 +1,21 @@
-"""Download copyright-free stock footage from Pexels, one clip per narration beat."""
+"""One visual per narration beat: a generated image first, stock footage second.
+
+Stock libraries cannot illustrate a specific story. Asked for "man standing at
+podium press conference" for a beat about FIFA's president facing revolt,
+Pexels returned a man wading in the sea -- and no amount of keyword tuning
+fixes that, because no stock library has that press conference in it.
+
+A generated image is drawn from what the beat actually says, so it matches by
+construction. Pexels stays as the fallback: if generation is slow or down, a
+loosely related clip still beats a blank screen.
+
+The generator is free and needs no key, which is the only reason this is the
+default rather than an option.
+"""
+import os
 import random
 import re
+import urllib.parse
 from pathlib import Path
 
 import requests
@@ -9,7 +24,11 @@ import config
 
 VIDEO_API = "https://api.pexels.com/videos/search"
 PHOTO_API = "https://api.pexels.com/v1/search"
+IMAGE_GEN_API = "https://image.pollinations.ai/prompt/"
 TIMEOUT = 30
+# Generation takes ~45s per beat on this connection. Nobody is waiting during
+# the scheduled run, and a matching visual is worth the wall clock.
+GEN_TIMEOUT = int(os.getenv("IMAGE_GEN_TIMEOUT", "180"))
 
 # When a beat's own keywords find nothing, the replacement has to at least
 # belong to the same world as the story. This file used to hold one tech-only
@@ -157,6 +176,58 @@ def _clean_query(keywords: str, category: str = "general") -> str:
     return mapped or random.choice(_fallbacks(category))
 
 
+# Style suffix per category. Without it the generator drifts between photo,
+# painting and 3D render from beat to beat, which reads as a mismatched
+# slideshow even when every individual image is fine.
+GEN_STYLE = {
+    "sports": "photorealistic sports photography, dramatic stadium lighting",
+    "tech": "photorealistic product and technology photography, clean lighting",
+    "science": "photorealistic science photography, documentary lighting",
+    "business": "photorealistic corporate photography, natural office light",
+    "entertainment": "photorealistic film still, cinematic lighting",
+    "health": "photorealistic medical documentary photography",
+    "world": "photorealistic photojournalism, natural light",
+    "general": "photorealistic editorial photography, natural light",
+}
+
+# The generator is literal about people. Naming a real person produces a
+# stranger who looks nothing like them, which is worse than not trying, so
+# beats are described by role and setting instead.
+GEN_NEGATIVE = "no text, no watermark, no letters, no logos, no captions"
+
+
+def _gen_prompt(keywords: str, category: str) -> str:
+    """Full scene description, unlike the stock query.
+
+    _clean_query truncates to three words because search APIs do better with
+    short queries -- "man standing at podium press conference" becomes "man
+    standing at". A generator wants the opposite: every word of the scene.
+    """
+    scene = " ".join(w for w in re.findall(r"[a-zA-Z]{2,}", keywords)
+                     if w.lower() not in DROP)
+    if not scene:
+        scene = random.choice(_fallbacks(category))
+    style = GEN_STYLE.get(category, GEN_STYLE["general"])
+    return f"{scene}, {style}, {GEN_NEGATIVE}"
+
+
+def _generate_image(keywords: str, category: str, vertical: bool, dest: Path,
+                    seed: int) -> bool:
+    """Draw this beat's scene. Returns False so the caller can fall back."""
+    width, height = (720, 1280) if vertical else (1280, 720)
+    url = (IMAGE_GEN_API + urllib.parse.quote(_gen_prompt(keywords, category))
+           + f"?width={width}&height={height}&seed={seed}&nologo=true&model=flux")
+    try:
+        resp = requests.get(url, timeout=GEN_TIMEOUT)
+        if resp.status_code != 200 or len(resp.content) < 5000:
+            return False
+        dest.write_bytes(resp.content)
+        return dest.stat().st_size > 5000
+    except Exception:
+        dest.unlink(missing_ok=True)
+        return False
+
+
 def _search_video(query: str, vertical: bool, used: set):
     params = {"query": query, "per_page": 15,
               "orientation": "portrait" if vertical else "landscape"}
@@ -227,8 +298,20 @@ def fetch_visuals(beats: list, work_dir: Path, vertical: bool, label: str,
     used, assets = set(), []
     for i, beat in enumerate(beats):
         query = _clean_query(beat["keywords"], category)
-        asset = _search_video(query, vertical, used)
 
+        if config.USE_AI_VISUALS:
+            dest = media_dir / f"beat_{i:02d}.jpg"
+            # Distinct seed per beat: one seed for the whole video makes every
+            # scene a variation of the same picture.
+            if _generate_image(beat["keywords"], category, vertical, dest,
+                               seed=1000 + i * 17):
+                assets.append({"path": dest, "ext": ".jpg", "is_image": True,
+                               "url": "", "credit": "AI generated"})
+                print(f"    beat {i + 1}/{len(beats)}  '{query}' -> AI image")
+                continue
+            print(f"    beat {i + 1}/{len(beats)}  AI fail, stock try kar raha hoon")
+
+        asset = _search_video(query, vertical, used)
         if not asset:  # narrower query failed — try the first keyword alone
             asset = _search_video(query.split()[0], vertical, used)
         if not asset:
@@ -241,7 +324,7 @@ def fetch_visuals(beats: list, work_dir: Path, vertical: bool, label: str,
             if _download(asset["url"], dest):
                 assets.append({**asset, "path": dest})
                 print(f"    beat {i + 1}/{len(beats)}  '{query}' -> "
-                      f"{'photo' if asset['is_image'] else 'video'}")
+                      f"{'photo' if asset['is_image'] else 'video'} (stock)")
                 continue
 
         assets.append(None)

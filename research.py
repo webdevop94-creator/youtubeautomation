@@ -156,8 +156,14 @@ def facts_prompt_block(facts: dict) -> str:
     return "\n".join(parts)
 
 
-def fact_depth(facts: dict) -> int:
-    """How many beats the source material can actually support without filler."""
+def source_richness(facts: dict) -> int:
+    """How many beats the source material could support without filler.
+
+    Deliberately uncapped: this measures the SOURCES, and is what decides
+    whether a topic is worth covering at all. Keeping it separate from the
+    runtime cap matters -- capping this number instead made every topic look
+    too thin to use, because the floor for "good enough" sat above the cap.
+    """
     words = sum(len(a["text"].split()) for a in facts["articles"])
     words += sum(len(s.split()) for s in facts["snippets"])
     if words > 1400:
@@ -167,3 +173,13 @@ def fact_depth(facts: dict) -> int:
     if words > 250:
         return 7
     return 5
+
+
+def fact_depth(facts: dict) -> int:
+    """How many beats to actually write: source-limited, then runtime-limited.
+
+    Rich sources are a reason to be accurate, not a reason to run long.
+    """
+    import config
+
+    return min(source_richness(facts), config.MAX_LONG_BEATS)

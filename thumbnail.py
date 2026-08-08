@@ -7,15 +7,16 @@ from PIL import Image, ImageDraw, ImageEnhance, ImageFilter, ImageFont
 W, H = 1280, 720
 
 
-def _font(size: int):
-    for name in ("seguibl.ttf", "arialbd.ttf", "segoeuib.ttf"):
-        path = Path(r"C:\Windows\Fonts") / name
-        if path.exists():
-            try:
-                return ImageFont.truetype(str(path), size)
-            except OSError:
-                continue
-    return ImageFont.load_default()
+def _font(size: int, text: str = ""):
+    """Shared with video.py so both surfaces pick a Devanagari-capable face.
+
+    Segoe UI Black has no Devanagari and draws Hindi as empty boxes, and the
+    old Windows-only path meant every non-Windows run silently fell back to a
+    tiny bitmap font.
+    """
+    import video
+
+    return video._font(size, text)
 
 
 def _background(assets: list) -> Image.Image:
@@ -51,15 +52,17 @@ def make_thumbnail(text: str, assets: list, dest: Path) -> Path:
     # Red accent bar down the left — reads as "news" at thumbnail size.
     draw.rectangle([0, 0, 18, H], fill=(220, 30, 40))
 
+    # .upper() only affects Latin; Devanagari has no capitals, so Hindi
+    # thumbnail text passes through unchanged.
     wrapped = textwrap.fill(text.strip().upper(), width=14)
     size = 118
-    font = _font(size)
+    font = _font(size, wrapped)
     while size > 46:
         box = draw.multiline_textbbox((0, 0), wrapped, font=font, spacing=10)
         if box[2] - box[0] < W - 140 and box[3] - box[1] < H - 140:
             break
         size -= 8
-        font = _font(size)
+        font = _font(size, wrapped)
 
     box = draw.multiline_textbbox((0, 0), wrapped, font=font, spacing=10)
     x = (W - (box[2] - box[0])) / 2

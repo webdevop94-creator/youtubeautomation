@@ -87,6 +87,22 @@ ALLOW_SENSITIVE = os.getenv("ALLOW_SENSITIVE", "false").strip().lower() == "true
 # Categories the agent is allowed to make videos about. Empty list = all.
 ALLOWED_CATEGORIES = _csv("ALLOWED_CATEGORIES", "")
 
+# --- Visuals ----------------------------------------------------------------
+# Generate each beat's visual instead of searching stock. Stock cannot
+# illustrate a specific story -- a beat about FIFA's president facing revolt
+# returned footage of a man wading in the sea. Set false to go back to Pexels.
+USE_AI_VISUALS = os.getenv("USE_AI_VISUALS", "true").strip().lower() == "true"
+
+# --- Length -----------------------------------------------------------------
+# Longer is not better: a padded four-minute video loses viewers a tight
+# three-minute one keeps. The narration runs at roughly 145 words per minute
+# and each beat is written at 55-80 words, so the beat cap follows from the
+# minute cap rather than being guessed separately.
+MAX_VIDEO_MINUTES = float(os.getenv("MAX_VIDEO_MINUTES", "3"))
+WORDS_PER_MINUTE = 145
+WORDS_PER_BEAT = 65
+MAX_LONG_BEATS = max(4, int(MAX_VIDEO_MINUTES * WORDS_PER_MINUTE / WORDS_PER_BEAT))
+
 # --- Autonomous agent (agent.py) ------------------------------------------
 # How many videos one scheduled run may publish.
 VIDEOS_PER_RUN = int(os.getenv("VIDEOS_PER_RUN", "1"))
@@ -96,6 +112,12 @@ MAX_TOPIC_ATTEMPTS = int(os.getenv("MAX_TOPIC_ATTEMPTS", "4"))
 HISTORY_DAYS = int(os.getenv("HISTORY_DAYS", "45"))
 HISTORY_FILE = ROOT / "history.json"
 LOG_FILE = ROOT / "agent.log"
+
+# Housekeeping. A daily job that never deletes anything eventually fills the
+# disk -- slowly on AI visuals (~23 MB a video), fast on stock clips (~530 MB).
+# Intermediates go as soon as a run finishes; whole folders age out.
+KEEP_OUTPUT_DAYS = int(os.getenv("KEEP_OUTPUT_DAYS", "30"))
+DELETE_INTERMEDIATES = os.getenv("DELETE_INTERMEDIATES", "true").strip().lower() == "true"
 
 
 def _find_tool(name: str) -> str:

@@ -15,6 +15,7 @@ Then schedule it:      powershell -File setup_schedule.ps1
 """
 import argparse
 import json
+import shutil
 import socket
 import sys
 import time
@@ -81,6 +82,52 @@ def is_network_error(exc: Exception) -> bool:
     return False
 
 
+def tidy(work_dir: Path) -> None:
+    """Drop what a finished run no longer needs.
+
+    The silent renders and per-beat parts exist only to be concatenated; once
+    the final mp4s are written they are dead weight, and on a daily schedule
+    dead weight is the thing that fills a disk.
+    """
+    if not config.DELETE_INTERMEDIATES:
+        return
+
+    freed = 0
+    for name in ("silent_long.mp4", "silent_shorts.mp4"):
+        part = work_dir / name
+        if part.exists():
+            freed += part.stat().st_size
+            part.unlink(missing_ok=True)
+
+    for folder in ("clips_long", "clips_shorts", "audio_long", "audio_shorts"):
+        target = work_dir / folder
+        if target.is_dir():
+            freed += sum(f.stat().st_size for f in target.rglob("*") if f.is_file())
+            shutil.rmtree(target, ignore_errors=True)
+
+    if freed:
+        log(f"  cleanup   : {freed / 1024 / 1024:.0f} MB intermediates hataye")
+
+
+def prune_old_outputs() -> None:
+    """Age out whole run folders, keeping the script and the upload record."""
+    days = config.KEEP_OUTPUT_DAYS
+    if days <= 0 or not config.OUTPUT_DIR.exists():
+        return
+
+    cutoff = time.time() - days * 86400
+    removed, freed = 0, 0
+    for folder in config.OUTPUT_DIR.iterdir():
+        if not folder.is_dir() or folder.stat().st_mtime >= cutoff:
+            continue
+        freed += sum(f.stat().st_size for f in folder.rglob("*") if f.is_file())
+        shutil.rmtree(folder, ignore_errors=True)
+        removed += 1
+    if removed:
+        log(f"  {removed} folders {days} din se purane the, hata diye "
+            f"({freed / 1024 / 1024:.0f} MB)")
+
+
 def log(message: str, echo: bool = True) -> None:
     stamped = f"{datetime.now():%Y-%m-%d %H:%M:%S}  {message}"
     if echo:
@@ -102,21 +149,25 @@ def build_one(topic: dict, args) -> dict:
     log(f"  signal    : {viral.describe(topic)}")
 
     facts = research.gather_facts(topic)
+    # Richness judges the topic; depth decides the script length. They are
+    # measured separately so the runtime cap cannot reject good topics.
+    richness = research.source_richness(facts)
     depth = research.fact_depth(facts)
-    if len(facts["articles"]) < MIN_ARTICLES or depth < MIN_FACT_DEPTH:
+    if len(facts["articles"]) < MIN_ARTICLES or richness < MIN_FACT_DEPTH:
         # research.py swallows fetch errors by design, so an outage arrives here
         # disguised as an empty result. Check before blaming the sources.
         if not online():
             raise NetworkDown("research ke dauraan internet chala gaya")
         return {"ok": False,
                 "reason": f"sources patle hain ({len(facts['articles'])} articles, "
-                          f"depth {depth}) — is topic par factual script nahi banegi"}
+                          f"richness {richness}) — is topic par factual script nahi banegi"}
 
     script = script_writer.write_script(facts, n_long_beats=depth,
                                         category=topic.get("category", "general"))
 
     work_dir = config.OUTPUT_DIR / (
-        f"{datetime.now():%Y-%m-%d_%H%M}_{pipeline.slugify(script['title'])}")
+        f"{datetime.now():%Y-%m-%d_%H%M}_"
+        f"{pipeline.slugify(script['title'], fallback=topic.get('title', ''))}")
     work_dir.mkdir(parents=True, exist_ok=True)
     (work_dir / "script.json").write_text(
         json.dumps(script, ensure_ascii=False, indent=2), encoding="utf-8")
@@ -182,11 +233,13 @@ def build_one(topic: dict, args) -> dict:
     # Recorded even when upload was skipped -- the work was done and the topic
     # should not come back around tomorrow.
     history.record(topic, script, work_dir, url)
+    tidy(work_dir)
     return {"ok": True, "title": script["title"], "folder": work_dir, "url": url}
 
 
 def run(args) -> int:
     config.OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+    prune_old_outputs()
     log("=" * 68, echo=False)
     log(f"AGENT RUN start  (privacy={args.privacy or config.UPLOAD_PRIVACY}, "
         f"format={args.format}, upload={not args.no_upload})")

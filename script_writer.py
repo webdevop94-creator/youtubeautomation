@@ -18,13 +18,29 @@ Assume the viewer has not heard of the people, teams, companies or places involv
 introduce them in one short clause before using them.
 
 LANGUAGE RULES (critical — the text goes straight into a Hindi text-to-speech engine):
-- Hinglish: Hindi sentence structure, English technical words kept in English
-  (model, training, parameter, open source, startup, funding — do NOT translate these).
-- Write everything in Roman script, NOT Devanagari.
-- Short sentences. Max 15 words each. TTS sounds robotic on long sentences.
-- Spell numbers out in words: "do hazaar dollar" not "$2000", "aath sau billion" not "800B".
-- NO emoji, NO markdown, NO brackets, NO special characters. Only letters, commas, periods.
-- Conversational, like explaining to a friend. Use "aap", "dekho", "matlab", "yaani".
+- Write the narration in DEVANAGARI (देवनागरी), not Roman script. The voice is a
+  Hindi neural voice; given Roman text it guesses at pronunciation and the result
+  sounds like an English speaker reading Hindi.
+- Keep English words that Hindi speakers actually use in English, written in
+  Devanagari sound: नेटफ्लिक्स, ट्रेलर, स्टार्टअप, मॉडल, ट्रांसफ़र, रिव्यू.
+  Do not invent Sanskrit translations nobody says out loud.
+- Proper nouns of people, brands and places also go in Devanagari:
+  ग्रेटा ली, लिवरपूल, हॉन्ग कॉन्ग.
+- Numbers: write them as digits (12, 2026, 70). The Hindi voice reads digits
+  correctly, and digits are what the fact-checker can verify.
+- NO emoji, NO markdown, NO brackets, NO special characters.
+
+WRITE LIKE A PERSON TALKING, NOT LIKE A NEWS TICKER — this decides whether the
+video sounds human:
+- Vary sentence length. Mix a long flowing sentence with a short punchy one.
+  A page of identical short sentences is what makes TTS sound robotic.
+- Join ideas with the words people actually use when speaking: तो, लेकिन, अब,
+  मतलब, यानी, दरअसल, और सबसे बड़ी बात, देखिए, हुआ ये कि.
+- Address the viewer directly: आप, आपको, दोस्तों.
+- Use a dash for the natural mid-sentence pause a speaker takes.
+  FLAT   "इस फ़िल्म का नाम द लास्ट हाउस है। यह एक थ्रिलर है। ट्रेलर वायरल हो रहा है।"
+  HUMAN  "तो नेटफ्लिक्स पर एक नई थ्रिलर आई है — नाम है द लास्ट हाउस, और इसका ट्रेलर
+          देखकर लोग थोड़े हिल गए हैं।"
 
 CONTENT RULES:
 - Use ONLY the facts given to you. Never invent numbers, names, dates or quotes.
@@ -43,7 +59,8 @@ NO REPETITION — this is the most common failure:
   across the whole script.
 - Do not restate the headline in multiple beats with different wording.
 
-KEYWORDS — these are fed to a stock footage search, which is literal-minded:
+KEYWORDS — ENGLISH ONLY, never Devanagari. These go to a stock footage API that
+only understands English. The narration is Hindi; the keywords are not.
 - Name a scene a camera could actually film. Never an abstract concept.
 - Words like cloud, growth, race, security, adoption, future, ecosystem return
   nonsense: "cloud" returns sky, "india" returns village scenery.
@@ -107,8 +124,8 @@ This story is a {category} story. {angle}
 
 Return JSON with exactly this shape:
 {{
-  "title": "YouTube title, Hinglish, under 65 characters, curiosity + main keyword",
-  "thumbnail_text": "3 to 5 words, ALL CAPS, biggest possible impact",
+  "title": "YouTube title in Devanagari, under 65 characters, curiosity + main keyword",
+  "thumbnail_text": "3 to 5 words in Devanagari, biggest possible impact",
   "long_beats": [
     {{"text": "narration for this beat, 2 to 4 sentences",
       "keywords": "2-3 English words naming a CONCRETE FILMABLE SCENE"}}
@@ -160,26 +177,28 @@ figure you are guessing at. Any invented figure is caught and the whole line is 
 
 Keep shorts_beats, title, description and tags exactly as they were."""
 
-LANGUAGE_FEEDBACK = """These {key} drifted into plain English. This channel is Hinglish
-and the narration is read by a HINDI text-to-speech voice, so English sentences sound
-wrong and the video is unusable:
+LANGUAGE_FEEDBACK = """These {key} are not in Devanagari. The narration is read by a
+HINDI text-to-speech voice, which mispronounces Roman text badly, so the video is
+unusable as written:
 
 {examples}
 
 Return JSON containing ONLY the key "{key}".
 
-Rewrite EVERY beat in Hinglish: Hindi sentence structure written in Roman script, with
-English kept only for technical or proper nouns. Every sentence needs Hindi connective
-words -- hai, hain, ka, ki, ke, ko, ne, se, mein, aur, ye, wo, kya, lekin, isliye.
+Rewrite EVERY beat in Devanagari (देवनागरी). English words that Hindi speakers really
+use stay, but written in Devanagari sound. Proper nouns too.
 
   WRONG  "She defeated the defending champion in straight sets."
-  RIGHT  "Usne defending champion ko straight sets mein hara diya."
+  WRONG  "Usne defending champion ko straight sets mein hara diya."
+  RIGHT  "उसने डिफ़ेंडिंग चैंपियन को स्ट्रेट सेट्स में हरा दिया।"
 
-  WRONG  "The stadium was sold out and fans cheered loudly."
-  RIGHT  "Stadium poora bhara hua tha, aur fans zor se cheer kar rahe the."
+  WRONG  "Netflix par ek nayi thriller aayi hai."
+  RIGHT  "नेटफ्लिक्स पर एक नई थ्रिलर आई है।"
+
+Keep the "keywords" fields in ENGLISH -- they go to a stock footage search.
 
 Keep the same facts, the same order and the same number of beats. Change only the
-language. Do not add any fact that is not already there."""
+script. Do not add any fact that is not already there."""
 
 
 def _extract_json(raw) -> dict:
@@ -211,6 +230,10 @@ def _extract_json(raw) -> dict:
 # outright -- turning "Toronto's stadium" into "Toronto s stadium". Models emit
 # curly quotes constantly, so they are folded to ASCII before anything is cut.
 SMART_PUNCTUATION = {
+    # Hindi full stops. They are punctuation, not word characters, so the
+    # allow-list in _sanitise would delete them -- merging every sentence into
+    # one and taking the sentence-level number check down with it.
+    "।": ".", "॥": ".",
     "‘": "'", "’": "'", "‚": "'", "‛": "'",
     "“": '"', "”": '"', "„": '"', "′": "'", "‵": "'",
     "–": "-", "—": "-", "―": "-", "−": "-",
@@ -241,7 +264,11 @@ def _sanitise(text: str) -> str:
     for pattern, replacement in SPOKEN_SYMBOLS:
         text = re.sub(pattern, replacement, text)
     text = re.sub(r"[*_#`~\[\]<>|]", " ", text)
-    text = re.sub(r"[^\w\s.,?!:;'\"()-]", " ", text, flags=re.UNICODE)
+    # The Devanagari range is listed explicitly because Python's \w does NOT
+    # cover combining marks: matras and the virama are categories Mc/Mn, which
+    # str.isalnum() rejects. Without this, "यह पहला वाक्य है" came out as
+    # "यह पहल व क य ह" -- every vowel sign silently deleted.
+    text = re.sub(r"[^\w\s.,?!:;'\"()\-ऀ-ॿ]", " ", text, flags=re.UNICODE)
     text = re.sub(r"\s+([.,?!:;])", r"\1", text)
     text = re.sub(r"\s+", " ", text).strip()
     if text and text[-1] not in ".?!":
@@ -256,34 +283,34 @@ ne par is us ek hi kya kaise jo cha raha rahe rahi ho hua kar liye ab ki""".spli
 # The prompt asks for Hinglish and the model agrees for a few beats, then
 # quietly slides into pure English. A live run produced beats 4 to 9 entirely
 # in English -- unusable, because the voice is a Hindi TTS reading Roman text.
-# Deliberately excludes words that are also common English: "the", "is", "us",
-# "to", "me", "hi", "no". Counting those scored a fully English sentence at
-# 0.14 -- above the threshold -- purely on its articles and prepositions.
-HINGLISH_MARKERS = set("""ka ki ke ko ne se mein hai hain tha thi hoga hogi
-ye yeh wo woh aur ya bhi toh kya kyun kaise jab tab ab abhi phir
-liye lekin magar sirf bahut zyada accha achha bura naya nayi purana sab sabhi
-har kuch kuchh nahi nahin haan aap aapko aapka hum humein hamara unka uska
-unki uske iske inka dekho dekhiye suno samjho matlab yaani chaliye karo kar
-karke karna karti karta karte hota hoti hote gaya gayi gaye raha rahi rahe
-diya diye liya liye lene wala wali wale rakha rakhi mila mili milta
-crore lakh hazaar baar saal mahine dono teeno itna itni kitna kitni
-apna apni apne uska unko usne isne isse usse yahan wahan kahan""".split())
+#
+# Now that narration is Devanagari, drift is measured by writing system rather
+# than by vocabulary. Counting Hinglish marker words was fragile: English
+# shares spellings with romanised Hindi ("the", "is", "to", "me"), and an
+# entirely English sentence once scored above the threshold on its articles
+# alone. A script cannot be mistaken for another script.
+DEVANAGARI = re.compile(r"[ऀ-ॿ]")
+LATIN = re.compile(r"[A-Za-z]")
 
-# Below this share of Hinglish marker words, a beat has drifted into English.
-MIN_HINGLISH_SHARE = 0.10
+# Deliberately loose. Brand and product names stay in English by design --
+# "नेटफ्लिक्स की नई फ़िल्म The Last House" is exactly what we want, and it scores
+# 0.74. The guard exists to catch beats written entirely in English, not to
+# police the occasional English noun.
+MIN_DEVANAGARI_SHARE = 0.55
 
 
-def _hinglish_share(text: str) -> float:
-    words = re.findall(r"[a-zA-Z']+", text.lower())
-    if len(words) < 8:
+def _devanagari_share(text: str) -> float:
+    deva = len(DEVANAGARI.findall(text))
+    latin = len(LATIN.findall(text))
+    if deva + latin < 20:
         return 1.0  # too short to judge; the length guard handles these
-    return sum(1 for w in words if w.strip("'") in HINGLISH_MARKERS) / len(words)
+    return deva / (deva + latin)
 
 
 def _english_beats(beats: list) -> list:
-    """Indexes of beats that are effectively English, not Hinglish."""
+    """Indexes of beats written in English instead of Hindi."""
     return [i for i, beat in enumerate(beats)
-            if _hinglish_share(beat.get("text", "")) < MIN_HINGLISH_SHARE]
+            if _devanagari_share(beat.get("text", "")) < MIN_DEVANAGARI_SHARE]
 
 
 def _shingles(text: str) -> set:

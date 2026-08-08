@@ -23,6 +23,7 @@ Reddit's JSON API returns 403 to server traffic and its per-subreddit RSS
 rate-limits aggressively, so only the single r/all feed is requested.
 """
 import html
+import os
 import re
 import time
 import urllib.parse
@@ -178,11 +179,17 @@ EXPLAINABLE = re.compile(
     re.I)
 
 
+# Generous on purpose. A home connection was measured taking 22 seconds for a
+# single trends feed, so a 20-second timeout killed requests that were about to
+# succeed -- and then retried them, doubling the wall clock for nothing.
+FEED_TIMEOUT = int(os.getenv("FEED_TIMEOUT", "45"))
+
+
 def _get(url: str, tries: int = 2) -> bytes:
     """Fetch with one polite retry. A dead feed must not kill the whole run."""
     for attempt in range(tries):
         try:
-            resp = requests.get(url, headers=HEADERS, timeout=20)
+            resp = requests.get(url, headers=HEADERS, timeout=FEED_TIMEOUT)
             if resp.status_code == 200:
                 return resp.content
             if resp.status_code == 429 and attempt + 1 < tries:

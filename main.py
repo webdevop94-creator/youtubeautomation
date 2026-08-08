@@ -30,8 +30,13 @@ import visuals
 import voice
 
 
-def slugify(text: str, limit: int = 45) -> str:
+def slugify(text: str, limit: int = 45, fallback: str = "") -> str:
+    """ASCII folder name. Devanagari titles leave nothing behind, so the
+    English source headline is used instead -- otherwise every folder would be
+    called "video" and the output directory becomes unreadable."""
     slug = re.sub(r"[^a-zA-Z0-9]+", "-", text.lower()).strip("-")
+    if len(slug) < 4 and fallback:
+        slug = re.sub(r"[^a-zA-Z0-9]+", "-", fallback.lower()).strip("-")
     return (slug[:limit].rstrip("-")) or "video"
 
 

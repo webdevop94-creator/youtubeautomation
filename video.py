@@ -1,5 +1,6 @@
 """Assemble narration + visuals + burned-in subtitles into a finished MP4."""
 import random
+import re
 import subprocess
 import textwrap
 from pathlib import Path
@@ -24,14 +25,46 @@ def _run(args: list, cwd: Path = None) -> None:
         raise RuntimeError("FFmpeg fail:\n  " + "\n  ".join(tail))
 
 
-def _font(size: int):
-    for name in ("seguibl.ttf", "arialbd.ttf", "NirmalaB.ttf", "segoeuib.ttf"):
-        path = Path(r"C:\Windows\Fonts") / name
-        if path.exists():
-            try:
-                return ImageFont.truetype(str(path), size)
-            except OSError:
+DEVANAGARI = re.compile(r"[ऀ-ॿ]")
+
+# Windows first, then the usual Linux locations so the same code works on a
+# server. Devanagari-capable faces lead when the text needs them: Segoe UI
+# Black draws Hindi as empty boxes.
+FONT_DIRS = [Path(r"C:\Windows\Fonts"), Path("/usr/share/fonts"),
+             Path("/usr/local/share/fonts"), Path.home() / ".fonts"]
+
+# (filename, face index). Windows ships Nirmala as a .ttc COLLECTION, not a
+# .ttf -- searching for "Nirmala.ttf" finds nothing and Hindi silently falls
+# back to a Latin face that draws it as empty boxes. Index 1 is the Bold face.
+DEVANAGARI_FONTS = (("Nirmala.ttc", 1), ("Nirmala.ttc", 0),
+                    ("mangalb.ttf", 0), ("mangal.ttf", 0),
+                    ("NotoSansDevanagari-Bold.ttf", 0),
+                    ("NotoSansDevanagari-Regular.ttf", 0),
+                    ("Lohit-Devanagari.ttf", 0))
+LATIN_FONTS = (("seguibl.ttf", 0), ("arialbd.ttf", 0), ("segoeuib.ttf", 0),
+               ("DejaVuSans-Bold.ttf", 0), ("LiberationSans-Bold.ttf", 0))
+
+
+def _find_font(candidates: tuple):
+    for name, index in candidates:
+        for folder in FONT_DIRS:
+            if not folder.exists():
                 continue
+            direct = folder / name
+            for path in ([direct] if direct.exists() else list(folder.rglob(name))):
+                return str(path), index
+    return "", 0
+
+
+def _font(size: int, text: str = ""):
+    order = (DEVANAGARI_FONTS + LATIN_FONTS if DEVANAGARI.search(text)
+             else LATIN_FONTS + DEVANAGARI_FONTS)
+    path, index = _find_font(order)
+    if path:
+        try:
+            return ImageFont.truetype(path, size, index=index)
+        except OSError:
+            pass
     return ImageFont.load_default()
 
 
@@ -58,7 +91,7 @@ def _text_card(text: str, size: tuple, dest: Path, show_text: bool = True) -> Pa
         return dest
 
     words = " ".join(text.split()[:14])
-    font = _font(int(width * 0.055))
+    font = _font(int(width * 0.055), words)
     wrapped = textwrap.fill(words, width=28)
 
     box = draw.multiline_textbbox((0, 0), wrapped, font=font, spacing=14)
@@ -72,16 +105,44 @@ def _text_card(text: str, size: tuple, dest: Path, show_text: bool = True) -> Pa
     return dest
 
 
-def _clip_from_image(src: Path, duration: float, size: tuple, dest: Path) -> None:
-    """Ken Burns slow zoom — a static image on screen for 8 seconds reads as dead air."""
+# Where the camera drifts, cycled per beat so consecutive shots do not all
+# move the same way. (x_expr, y_expr) over zoompan's progress variable `on`.
+DRIFTS = [
+    ("(iw-iw/zoom)*on/{frames}", "(ih-ih/zoom)/2"),          # left  -> right
+    ("(iw-iw/zoom)*(1-on/{frames})", "(ih-ih/zoom)/2"),      # right -> left
+    ("(iw-iw/zoom)/2", "(ih-ih/zoom)*on/{frames}"),          # top   -> bottom
+    ("(iw-iw/zoom)/2", "(ih-ih/zoom)*(1-on/{frames})"),      # bottom-> top
+]
+
+
+def _clip_from_image(src: Path, duration: float, size: tuple, dest: Path,
+                     index: int = 0) -> None:
+    """Ken Burns move that lasts the whole beat.
+
+    The old version used a fixed per-frame zoom step capped at 1.15, which it
+    reached in about five seconds. Beats run four to six times longer than
+    that, so the shot froze for most of its screen time and the video read as
+    a slideshow. The rate is now derived from the beat's own length, and the
+    frame also pans, with the direction cycling so consecutive shots differ.
+    """
     width, height = size
-    zoom_rate = 0.0009
+    frames = max(2, int(duration * config.FPS))
+
+    # Alternate push-in and pull-out; a whole video of push-ins feels uniform.
+    zoom_in = index % 2 == 0
+    span = 0.28
+    if zoom_in:
+        zoom_expr = f"min(1+{span}*on/{frames},{1 + span})"
+    else:
+        zoom_expr = f"max({1 + span}-{span}*on/{frames},1.0)"
+
+    x_expr, y_expr = DRIFTS[index % len(DRIFTS)]
     vf = (
         f"scale={width * 2}:{height * 2}:force_original_aspect_ratio=increase,"
         f"crop={width * 2}:{height * 2},"
-        f"zoompan=z='min(zoom+{zoom_rate},1.15)'"
-        f":x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)'"
-        f":d=1:s={width}x{height}:fps={config.FPS},"
+        f"zoompan=z='{zoom_expr}'"
+        f":x='{x_expr.format(frames=frames)}':y='{y_expr.format(frames=frames)}'"
+        f":d={frames}:s={width}x{height}:fps={config.FPS},"
         f"format=yuv420p"
     )
     _run([config.FFMPEG, "-y", "-v", "error", "-loop", "1", "-i", str(src),
@@ -108,7 +169,7 @@ ScaledBorderAndShadow: yes
 
 [V4+ Styles]
 Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
-Style: Cap,Arial,{fs},&H00FFFFFF,&H000000FF,&H00000000,&H60000000,-1,0,0,0,100,100,0,0,1,{outline},{shadow},2,{ml},{mr},{mv},1
+Style: Cap,{font},{fs},&H00FFFFFF,&H000000FF,&H00000000,&H60000000,-1,0,0,0,100,100,0,0,1,{outline},{shadow},2,{ml},{mr},{mv},1
 
 [Events]
 Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
@@ -122,6 +183,22 @@ def _ass_time(srt_stamp: str) -> str:
     return f"{int(h)}:{m}:{s}.{int(ms) // 10:02d}"
 
 
+def _caption_font(text: str) -> str:
+    """A font that can actually draw this text.
+
+    Arial has no Devanagari, so Hindi captions render as empty boxes. Nirmala
+    UI ships with Windows and covers Indic scripts; the others are fallbacks
+    for Linux, where libass picks the closest match it has.
+    """
+    if not DEVANAGARI.search(text):
+        return "Arial"
+    # Font NAME, not filename -- libass resolves it through the system font
+    # list, where Nirmala's .ttc registers as "Nirmala UI".
+    if Path(r"C:\Windows\Fonts\Nirmala.ttc").exists():
+        return "Nirmala UI"
+    return "Noto Sans Devanagari"
+
+
 def _srt_to_ass(srt_path: Path, size: tuple, dest: Path) -> Path:
     """Convert captions to ASS with an explicit PlayRes.
 
@@ -129,8 +206,9 @@ def _srt_to_ass(srt_path: Path, size: tuple, dest: Path) -> Path:
     scales every font size and margin by ~6.7x on a 1080p canvas.
     """
     width, height = size
+    body = srt_path.read_text(encoding="utf-8")
     header = ASS_HEADER.format(
-        w=width, h=height,
+        w=width, h=height, font=_caption_font(body),
         fs=int(height / 24),                 # ~80px on a 1920-tall Short
         outline=max(3, height // 320),
         shadow=max(1, height // 900),
@@ -139,7 +217,7 @@ def _srt_to_ass(srt_path: Path, size: tuple, dest: Path) -> Path:
     )
 
     events = []
-    for block in srt_path.read_text(encoding="utf-8").strip().split("\n\n"):
+    for block in body.strip().split("\n\n"):
         lines = [ln for ln in block.strip().splitlines() if ln.strip()]
         if len(lines) < 3 or "-->" not in lines[1]:
             continue
@@ -176,15 +254,15 @@ def build(narration: dict, assets: list, work_dir: Path, vertical: bool,
 
         if asset is None:
             card = _text_card(beat["text"], size, clips_dir / f"card_{i:02d}.jpg", card_text)
-            _clip_from_image(card, duration, size, dest)
+            _clip_from_image(card, duration, size, dest, i)
         elif asset["is_image"]:
-            _clip_from_image(asset["path"], duration, size, dest)
+            _clip_from_image(asset["path"], duration, size, dest, i)
         else:
             try:
                 _clip_from_video(asset["path"], duration, size, dest)
             except RuntimeError:  # corrupt download — don't lose the whole render
                 card = _text_card(beat["text"], size, clips_dir / f"card_{i:02d}.jpg", card_text)
-                _clip_from_image(card, duration, size, dest)
+                _clip_from_image(card, duration, size, dest, i)
 
         clip_paths.append(dest)
         print(f"    clip {i + 1}/{len(narration['beats'])} ready")
