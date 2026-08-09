@@ -1,0 +1,24 @@
+<meta charset="utf-8">
+<script type="importmap">
+{ "imports": { "three": "./assets/three.module.js", "three/addons/": "./assets/addons/" } }
+</script>
+<script type="module">
+import * as THREE from 'three';
+import { FBXLoader } from 'three/addons/loaders/FBXLoader.js';
+const FILES = ["Capoeira.fbx","char_jump.fbx","anim_whisper.fbx","char_talking.fbx",
+               "char_ty.fbx","char_d.fbx","char_b.fbx","char_c.fbx"];
+const out = [];
+for (const f of FILES) {
+  try {
+    const a = await new Promise((res, rej) =>
+      new FBXLoader().load('./assets/mixamo/' + f, res, undefined, rej));
+    const clips = (a.animations || []).map(c => ({
+      name: c.name, dur: +c.duration.toFixed(2), tracks: c.tracks.length }));
+    let skinned = 0, morphs = [];
+    a.traverse(o => { if (o.isSkinnedMesh) skinned++;
+      if (o.morphTargetDictionary) morphs.push(...Object.keys(o.morphTargetDictionary)); });
+    out.push({ file: f, clips, skinnedMeshes: skinned, morphs: morphs.slice(0, 8) });
+  } catch (e) { out.push({ file: f, error: String(e).slice(0, 90) }); }
+}
+window.__out = out; window.__done = true;
+</script>

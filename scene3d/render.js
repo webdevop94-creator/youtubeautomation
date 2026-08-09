@@ -3,11 +3,13 @@
 //   node render.js job.json
 //
 // job.json: { out, width, height, fps, seconds, room, speaker, shot,
-//             levels: [0..1 per frame] }
+//             levels: [0..1 per frame], spread: [0..1 per frame] }
 //
-// `levels` is the loudness of the real narration, sampled once per frame, so
-// the mouth stops when the voice stops. Driving it from a timer instead is
-// what makes a talking character look dubbed.
+// Both arrays come from the real narration, sampled once per frame, so the
+// mouth stops when the voice stops -- driving it from a timer instead is what
+// makes a talking character look dubbed. `levels` is how far the jaw is down
+// and `spread` is how wide the mouth is; see animate3d._analyse for why one
+// value was not enough.
 const puppeteer = require('puppeteer');
 const { spawn } = require('child_process');
 const path = require('path');
@@ -41,11 +43,21 @@ const CHROME = [
   const fps = job.fps || 24;
   const frames = Math.max(1, Math.round((job.seconds || 3) * fps));
   const levels = job.levels || [];
+  const spread = job.spread || [];
+  const at = (arr, i, fallback) =>
+    arr.length ? (arr[Math.min(i, arr.length - 1)] || 0) : fallback;
   const t0 = Date.now();
 
   const browser = await puppeteer.launch({
     headless: 'new',
     executablePath: CHROME,
+    // Leave --use-angle=default alone. Chrome 137 removed the automatic fall
+    // back to software WebGL, which reads as an argument for naming
+    // swiftshader-webgl explicitly on a machine with no discrete GPU. Measured
+    // on this one, the same 120-frame job renders at 11 fps on `default` and
+    // 2.9 fps on `swiftshader-webgl` -- nearly four times slower, because
+    // `default` is finding a faster backend than the pure software rasteriser.
+    // --enable-unsafe-swiftshader stays as the safety net if it ever cannot.
     args: ['--use-gl=angle', '--use-angle=default', '--enable-unsafe-swiftshader',
            '--ignore-gpu-blocklist', '--no-sandbox', '--disable-dev-shm-usage'],
   });
@@ -70,6 +82,7 @@ const CHROME = [
     varyB: job.varyB,
     turn: job.turn,
     clip: job.clip,
+    mouthUp: job.mouthUp,
   });
   await page.waitForFunction('window.__ready === true || window.__error', { timeout: 120000 });
 
@@ -86,10 +99,10 @@ const CHROME = [
   ff.stderr.on('data', d => process.stderr.write(String(d)));
 
   for (let i = 0; i < frames; i++) {
-    const level = levels.length ? (levels[Math.min(i, levels.length - 1)] || 0) : 0.5;
     const dataUrl = await page.evaluate(
-      (t, sp, lv, sh) => window.__renderFrame(t, sp, lv, sh),
-      i / fps, job.speaker || 0, level, job.shot || 'wide');
+      (t, spk, lv, wd, sh) => window.__renderFrame(t, spk, lv, wd, sh),
+      i / fps, job.speaker || 0, at(levels, i, 0.5), at(spread, i, 0.4),
+      job.shot || 'wide');
     ff.stdin.write(Buffer.from(dataUrl.split(',')[1], 'base64'));
   }
   ff.stdin.end();

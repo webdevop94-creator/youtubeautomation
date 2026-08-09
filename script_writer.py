@@ -763,13 +763,29 @@ def write_script(facts: dict, n_long_beats: int = 12, category: str = "general")
     return data
 
 
+def _beat_lines(beats: list) -> list:
+    """One beat as it reads at the approval gate.
+
+    Dialogue is laid out as a screenplay rather than a numbered list. Whether
+    an exchange actually works is a thing you judge by reading it as speech,
+    and "[beat 7] (visual: classroom)" above every line buries that.
+    """
+    out = []
+    for i, beat in enumerate(beats, 1):
+        if beat.get("speaker") is None:
+            out += [f"[beat {i}]  (visual: {beat['keywords']})", beat["text"], ""]
+            continue
+        who = "AARYAN" if beat["speaker"] == 0 else "RIYA  "
+        action = beat.get("action") or "talk"
+        out += [f"{who} ({action})".ljust(22) + beat["text"]]
+    return out
+
+
 def script_as_text(script: dict) -> str:
     lines = [f"TITLE: {script['title']}", "=" * 70, "", "--- LONG FORM ---", ""]
-    for i, beat in enumerate(script["long_beats"], 1):
-        lines += [f"[beat {i}]  (visual: {beat['keywords']})", beat["text"], ""]
+    lines += _beat_lines(script["long_beats"])
     lines += ["", "--- SHORTS ---", ""]
-    for i, beat in enumerate(script["shorts_beats"], 1):
-        lines += [f"[beat {i}]  (visual: {beat['keywords']})", beat["text"], ""]
+    lines += _beat_lines(script["shorts_beats"])
     lines += ["", "--- YOUR TAKE (apni raay yahan add karo) ---",
               script.get("your_take", ""), "",
               "--- DESCRIPTION ---", script.get("description", ""), "",

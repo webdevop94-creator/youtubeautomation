@@ -1,7 +1,8 @@
 .env
 .youtube_token.json
 output/
-music/
+# music/ is committed now: it is 1.5 MB of background tracks, and a cloud
+# runner that cannot find them publishes silent videos without saying so.
 __pycache__/
 *.pyc
 .venv/
@@ -28,9 +29,12 @@ client_secret*.json
 *.pem
 *.key
 
-# 3D assets: models aur three.js builds, MBs mein. Code commit hota hai,
-# binaries nahi — inhe Mixamo/three.js se dobara laya ja sakta hai.
-scene3d/assets/
+# 3D assets used to be ignored on the reasoning that code is committed and
+# binaries are not, since Mixamo and three.js can supply them again. That held
+# while the only machine rendering was this one. A scheduled cloud runner has
+# no Downloads folder to fetch them from, and a character library nobody can
+# reproduce exactly -- these particular Mixamo downloads, at these names -- is
+# not really reproducible anyway. ~68 MB, which a private repo carries fine.
 scene3d/node_modules/
 scene3d/*.mp4
 scene3d/job.json

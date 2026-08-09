@@ -28,8 +28,29 @@ def available() -> bool:
     return bool(config.ELEVEN_API_KEY) and not _exhausted
 
 
-def voice_for(label: str) -> str:
-    """Long-form and Shorts can use different voices."""
+# How hard the voice performs, per action, as (stability, style) overriding the
+# configured defaults. Lower stability is a less even read, which is what makes
+# a laugh sound like a laugh; raising it steadies a line that has to land.
+DELIVERY = {
+    "laugh":    (0.20, 0.90),
+    "surprise": (0.22, 0.85),
+    "jump":     (0.25, 0.85),
+    "run":      (0.28, 0.80),
+    "fight":    (0.28, 0.80),
+    "ask":      (0.40, 0.70),
+    "think":    (0.60, 0.45),
+}
+
+
+def voice_for(label: str, speaker: int = None) -> str:
+    """Which voice says this.
+
+    Who is speaking wins over which format it is. Two characters sharing one
+    voice is the failure that matters; long-form and Shorts sounding alike is
+    not, and there are only so many voices in the free tier.
+    """
+    if speaker is not None:
+        return config.ELEVEN_VOICE_B if speaker == 1 else config.ELEVEN_VOICE
     if label.startswith("shorts") and config.ELEVEN_VOICE_SHORTS:
         return config.ELEVEN_VOICE_SHORTS
     return config.ELEVEN_VOICE
@@ -39,23 +60,26 @@ class QuotaGone(Exception):
     """Credits finished. Caller should fall back rather than retry."""
 
 
-def synth(text: str, out_path: Path, label: str = "long", tries: int = 2) -> None:
+def synth(text: str, out_path: Path, label: str = "long", tries: int = 2,
+          speaker: int = None, action: str = None) -> None:
     """Write one beat to out_path as mp3. Raises QuotaGone when out of credits."""
     global _exhausted
 
+    stability, style = DELIVERY.get(
+        action, (config.ELEVEN_STABILITY, config.ELEVEN_STYLE))
     body = {
         "text": text,
         "model_id": MODEL,
         "voice_settings": {
-            "stability": config.ELEVEN_STABILITY,
+            "stability": stability,
             "similarity_boost": 0.75,
             # Style is what separates a performance from a newsreader; it is
             # also what makes a joke land.
-            "style": config.ELEVEN_STYLE,
+            "style": style,
             "use_speaker_boost": True,
         },
     }
-    url = f"{BASE}/text-to-speech/{voice_for(label)}"
+    url = f"{BASE}/text-to-speech/{voice_for(label, speaker)}"
     headers = {"xi-api-key": config.ELEVEN_API_KEY, "Content-Type": "application/json"}
 
     for attempt in range(tries):

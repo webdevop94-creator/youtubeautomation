@@ -14,7 +14,7 @@ import { FBXLoader } from 'three/addons/loaders/FBXLoader.js';
 // animation clip, both, and whether the face carries morph targets. Mixamo
 // characters and animations share one rig, so anything here needs no
 // retargeting -- which is what makes this route worth taking.
-const FILES = ['mixamo/char_talking.fbx', 'mixamo/anim_secret.fbx'];
+const FILES = ['mixamo/char_talking.fbx', 'mixamo/anim_whisper.fbx'];
 const loader = new FBXLoader();
 const load = p => new Promise((res, rej) => loader.load(p, res, undefined, rej));
 

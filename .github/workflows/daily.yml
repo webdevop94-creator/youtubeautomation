@@ -1,0 +1,151 @@
+# Build and publish the daily videos on GitHub's machines instead of the
+# laptop, so a shut-down PC stops being the reason a day gets skipped.
+#
+# Windows Task Scheduler cannot help with that. WakeToRun brings a machine back
+# from sleep or hibernate, but nothing wakes a computer that has been shut
+# down. This runs whether the laptop is on, off, or somewhere else entirely.
+name: Daily videos
+
+on:
+  schedule:
+    # GitHub cron is UTC. 01:30 UTC = 07:00 IST, 02:30 UTC = 08:00 IST.
+    # Worth knowing: scheduled runs are queued, not guaranteed on the minute --
+    # GitHub delays them under load, sometimes by up to an hour. If the exact
+    # hour matters, this is the wrong tool; if "once each morning" matters, it
+    # is the right one.
+    - cron: "30 1 * * *"
+    - cron: "30 2 * * *"
+  workflow_dispatch:
+    inputs:
+      count:
+        description: "Kitni videos banani hain"
+        default: "1"
+      privacy:
+        description: "public / unlisted / private"
+        default: "public"
+      kind:
+        description: "stories / facts / riddles / jokes (khaali = rotation)"
+        default: ""
+
+# One run at a time. Two agents at once share one history.json with no locking
+# between them, so they can pick the same topic and overwrite each other's
+# entry -- and on a scheduled pair an hour apart that is not hypothetical.
+concurrency:
+  group: daily-videos
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90            # free minutes are finite; do not run away
+    permissions:
+      contents: write              # to push history.json back
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: scene3d/package-lock.json
+
+      - name: System packages
+        run: |
+          sudo apt-get update -qq
+          # fonts-noto-devanagari is not optional. The subtitles are Hindi, and
+          # libass draws every glyph it has no font for as an empty box -- so
+          # without this the captions come out as rows of rectangles and the
+          # render still reports success.
+          sudo apt-get install -y -qq ffmpeg fonts-noto-devanagari fonts-noto-core
+          fc-list | grep -ci devanagari || (echo "Devanagari font missing"; exit 1)
+
+      - name: Python deps
+        run: pip install -r requirements.txt
+
+      - name: Renderer deps
+        working-directory: scene3d
+        run: npm ci
+
+      - name: Check Chrome
+        run: |
+          which google-chrome || which chromium-browser || which chromium
+          google-chrome --version
+
+      - name: Write .env and YouTube token
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          NVIDIA_API_KEY: ${{ secrets.NVIDIA_API_KEY }}
+          PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }}
+          ELEVEN_API_KEY: ${{ secrets.ELEVEN_API_KEY }}
+          YOUTUBE_CLIENT_ID: ${{ secrets.YOUTUBE_CLIENT_ID }}
+          YOUTUBE_CLIENT_SECRET: ${{ secrets.YOUTUBE_CLIENT_SECRET }}
+          YOUTUBE_TOKEN_JSON: ${{ secrets.YOUTUBE_TOKEN_JSON }}
+        run: |
+          # Keys come from secrets; everything else is ordinary configuration
+          # and lives here in the open where it can be read and changed.
+          cat > .env <<ENV
+          GEMINI_API_KEY=$GEMINI_API_KEY
+          GROQ_API_KEY=$GROQ_API_KEY
+          NVIDIA_API_KEY=$NVIDIA_API_KEY
+          PEXELS_API_KEY=$PEXELS_API_KEY
+          ELEVEN_API_KEY=$ELEVEN_API_KEY
+          YOUTUBE_CLIENT_ID=$YOUTUBE_CLIENT_ID
+          YOUTUBE_CLIENT_SECRET=$YOUTUBE_CLIENT_SECRET
+
+          TTS_ENGINE=edge
+          VOICE=hi-IN-MadhurNeural
+          VOICE_RATE=-2%
+          VOICE_B=hi-IN-SwaraNeural
+
+          CONTENT_MODE=animation
+          ANIMATION_KINDS=stories,facts,riddles
+          VISUAL_STYLE=3d
+          USE_AI_VISUALS=false
+          MAX_VIDEO_MINUTES=1.1
+          FPS=30
+          MUSIC_VOLUME_DB=-22
+          ENV
+          printf '%s' "$YOUTUBE_TOKEN_JSON" > .youtube_token.json
+          python -c "import json;json.load(open('.youtube_token.json'));print('token JSON theek hai')"
+
+      - name: Build and upload
+        env:
+          CHROME_PATH: /usr/bin/google-chrome
+          PYTHONIOENCODING: utf-8
+        run: |
+          python agent.py \
+            --count "${{ inputs.count || '1' }}" \
+            --privacy "${{ inputs.privacy || 'public' }}" \
+            ${{ inputs.kind && format('--kind {0}', inputs.kind) || '' }}
+
+      - name: Remember what was covered
+        # The duplicate guard is only useful if it survives the runner, which
+        # is deleted the moment this finishes. Committing it back is the whole
+        # mechanism; a cache would expire and quietly start repeating topics.
+        if: always()
+        run: |
+          git config user.name "youtube-automation"
+          git config user.email "actions@github.com"
+          git add -f history.json || true
+          git diff --cached --quiet || git commit -m "history: $(date -u +%F) ka run"
+          git pull --rebase --autostash || true
+          git push || echo "history push nahi hua, agla run dobara koshish karega"
+
+      - name: Keep the logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: run-logs
+          path: |
+            agent.log
+            output/**/script.txt
+            output/**/title_and_description.txt
+          if-no-files-found: ignore
+          retention-days: 7
