@@ -58,12 +58,20 @@ jobs:
       - name: System packages
         run: |
           sudo apt-get update -qq
-          # fonts-noto-devanagari is not optional. The subtitles are Hindi, and
-          # libass draws every glyph it has no font for as an empty box -- so
-          # without this the captions come out as rows of rectangles and the
-          # render still reports success.
-          sudo apt-get install -y -qq ffmpeg fonts-noto-devanagari fonts-noto-core
-          fc-list | grep -ci devanagari || (echo "Devanagari font missing"; exit 1)
+          # Devanagari fonts are not optional. libass draws every glyph it has
+          # no font for as an empty box and reports success either way, so
+          # without these the Hindi captions arrive as rows of rectangles in a
+          # video that looks, from the logs, like it worked.
+          #
+          # fonts-noto-core carries Noto Sans Devanagari, which is the family
+          # video._caption_font asks libass for by name on Linux.
+          # fonts-lohit-deva carries Lohit-Devanagari.ttf, which is the last
+          # entry in video.DEVANAGARI_FONTS. There is no fonts-noto-devanagari
+          # package on Ubuntu -- that guess cost the first run.
+          sudo apt-get install -y -qq ffmpeg fonts-noto-core fonts-lohit-deva
+          echo "--- Devanagari fonts mile: ---"
+          fc-list :lang=hi family | sort -u | head
+          fc-list :lang=hi | grep -q . || { echo "Devanagari font missing"; exit 1; }
 
       - name: Python deps
         run: pip install -r requirements.txt
