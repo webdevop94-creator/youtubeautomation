@@ -123,18 +123,39 @@ function buildHouseIn(g) {
   // of this room -- sofa at -5.4, shelf at 5.6 -- furnished two strips of wall
   // that never once appeared on screen.
   //
-  // The window is the focal point and the light source in one. Sky behind it
-  // rather than a flat panel, so the room reads as being somewhere.
-  const wx = 2.1;
-  box(g, 3.0, 2.2, 0.12, 0xbfe4f5, wx, 2.0, -5.86, 0.3);   // glazing
-  box(g, 3.3, 0.16, 0.22, TRIM, wx, 3.15, -5.82);           // head
-  box(g, 3.3, 0.16, 0.22, TRIM, wx, 0.85, -5.82);           // sill
-  box(g, 0.16, 2.4, 0.22, TRIM, wx - 1.6, 2.0, -5.82);
-  box(g, 0.16, 2.4, 0.22, TRIM, wx + 1.6, 2.0, -5.82);
-  box(g, 0.1, 2.2, 0.16, TRIM, wx, 2.0, -5.8);              // centre bar
+  // The window is the focal point and the light source in one. Dead centre,
+  // because that is the one spot guaranteed to be on screen in every shot the
+  // camera takes -- offset to 2.1 it fell outside the wide frame entirely, and
+  // a focal point nobody sees is just wall.
+  //
+  // The characters stand at +-1.05 and do not hide it: at 3.0 wide it reads
+  // between and behind them, which is where a window belongs anyway.
+  const wx = 0;
+  // Sky blue, not near-white. At 0xbfe4f5 with a low roughness the glazing
+  // caught the key light and blew out, so a 3-metre window in the middle of
+  // the frame read as a blank screen taped to the wall. Matte and darker, it
+  // reads as daylight outside.
+  box(g, 2.2, 1.9, 0.1, 0x8fc4e8, wx, 2.05, -5.86, 1);      // glazing
+  box(g, 2.5, 0.16, 0.22, TRIM, wx, 3.05, -5.82);           // head
+  box(g, 2.5, 0.18, 0.3, TRIM, wx, 1.05, -5.80);            // sill, proud
+  box(g, 0.16, 2.1, 0.22, TRIM, wx - 1.2, 2.05, -5.82);
+  box(g, 0.16, 2.1, 0.22, TRIM, wx + 1.2, 2.05, -5.82);
+  // Bars across as well as down. One vertical bar on a wide pane still reads
+  // as a panel; a grid reads as a window.
+  box(g, 0.09, 1.9, 0.16, TRIM, wx, 2.05, -5.8);
+  box(g, 2.2, 0.09, 0.16, TRIM, wx, 2.05, -5.8);
   // Curtains, which is what stops a window looking like a hole in a wall.
-  box(g, 0.7, 2.7, 0.16, 0xc9584f, wx - 1.9, 2.05, -5.7);
-  box(g, 0.7, 2.7, 0.16, 0xc9584f, wx + 1.9, 2.05, -5.7);
+  box(g, 0.6, 2.5, 0.16, 0xc9584f, wx - 1.5, 2.1, -5.7);
+  box(g, 0.6, 2.5, 0.16, 0xc9584f, wx + 1.5, 2.1, -5.7);
+
+  // A console under the window. The middle distance was bare floor, and this
+  // is what a living room actually puts there -- it also gives the wide shot
+  // something at knee height between the two characters.
+  box(g, 2.0, 0.1, 0.5, WOOD, wx, 0.72, -5.5);
+  for (const dx of [-0.85, 0.85]) box(g, 0.12, 0.72, 0.4, WOOD, wx + dx, 0.36, -5.5);
+  cyl(g, 0.16, 0.22, 0.3, 0x6f9c6a, wx - 0.6, 0.92, -5.5, 10);   // vase
+  box(g, 0.28, 0.34, 0.24, 0xe0c060, wx + 0.55, 0.94, -5.5);     // lamp base
+  cyl(g, 0.26, 0.32, 0.3, 0xfaf0d0, wx + 0.55, 1.26, -5.5, 12);  // shade
 
   // A door at the right edge, so the room has a way out without competing
   // with the window for the middle of the frame.
@@ -936,8 +957,12 @@ window.__renderFrame = (t, speaker, level, wide, shot) => {
                         portrait ? 2.6 : 1.55);
     camera.lookAt(x, portrait ? 0.85 : 1.25, 0);
   } else {
-    camera.position.set(sway, 1.30, 2.9);
-    camera.lookAt(0, 1.0, 0);
+    // Higher, closer, and aimed above the waist. The old wide shot sat at 1.30
+    // looking at 1.00, which put the horizon low in frame and gave the bottom
+    // third of every wide shot to bare floor -- and the room's window, pictures
+    // and shelves are all on the wall it was tilting away from.
+    camera.position.set(sway, 1.55, 2.45);
+    camera.lookAt(0, 1.22, 0);
   }
 
   renderer.render(scene, camera);
