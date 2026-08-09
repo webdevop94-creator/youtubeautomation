@@ -94,10 +94,15 @@ def fetch_visuals(script: dict, narration: dict, work_dir: Path, vertical: bool,
             return animate3d.fetch_visuals(
                 narration["beats"], work_dir, vertical, label, category,
                 audio=narration["audio"], seed=seed)
-        except (animate3d.Unavailable, RuntimeError, OSError,
-                subprocess.SubprocessError) as exc:
-            # Falling back beats failing: a stock video still publishes.
-            print(f"    [!] 3D render nahi hua ({exc}); stock par gir raha hoon")
+        except Exception as exc:
+            # Deliberately every exception, not a named few. The point of this
+            # branch is that a stock video still publishes, and that argument
+            # does not care what went wrong. It was a four-exception tuple
+            # until a TypeError in the 3D module's own summary print -- raised
+            # after every scene had rendered -- escaped it and destroyed a
+            # finished video on a live scheduled run.
+            print(f"    [!] 3D render nahi hua ({type(exc).__name__}: {exc}); "
+                  f"stock par gir raha hoon")
     return visuals.fetch_visuals(narration["beats"], work_dir, vertical, label,
                                  category)
 

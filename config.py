@@ -43,6 +43,13 @@ VOICE_RATE = os.getenv("VOICE_RATE", "+8%").strip()
 # are only Madhur and Swara -- so a lighter, faster read is how you get one.
 VOICE_PITCH = os.getenv("VOICE_PITCH", "+0Hz").strip()
 
+# The second character. Two people on screen sharing one voice never reads as a
+# conversation no matter how good the animation is, and edge-tts offers exactly
+# two Hindi voices -- which is exactly how many a two-hander needs.
+VOICE_B = os.getenv("VOICE_B", "hi-IN-SwaraNeural").strip()
+VOICE_B_RATE = os.getenv("VOICE_B_RATE", VOICE_RATE).strip()
+VOICE_B_PITCH = os.getenv("VOICE_B_PITCH", "+0Hz").strip()
+
 # Kokoro Hindi voices: hm_omega, hm_psi (male) | hf_alpha, hf_beta (female)
 KOKORO_VOICE = os.getenv("KOKORO_VOICE", "hm_omega").strip()
 KOKORO_SPEED = float(os.getenv("KOKORO_SPEED", "1.0"))
@@ -56,6 +63,10 @@ ELEVEN_API_KEY = os.getenv("ELEVEN_API_KEY", "").strip()
 ELEVEN_VOICE = os.getenv("ELEVEN_VOICE", "EXAVITQu4vr4xnSDxMaL").strip()      # Sarah
 ELEVEN_VOICE_SHORTS = os.getenv("ELEVEN_VOICE_SHORTS",
                                 "TX3LPaxmHKxFdv7VOQHJ").strip()               # Liam
+# The second character, when a script is written as dialogue. Distinct from
+# ELEVEN_VOICE_SHORTS, which picks a voice by video format rather than by who
+# is speaking -- the two questions are unrelated and were answered separately.
+ELEVEN_VOICE_B = os.getenv("ELEVEN_VOICE_B", "TX3LPaxmHKxFdv7VOQHJ").strip()  # Liam
 # Low stability + high style = performance rather than narration.
 ELEVEN_STABILITY = float(os.getenv("ELEVEN_STABILITY", "0.35"))
 ELEVEN_STYLE = float(os.getenv("ELEVEN_STYLE", "0.70"))
@@ -142,6 +153,29 @@ WORDS_PER_MINUTE = 145
 TARGET_WORDS = int(MAX_VIDEO_MINUTES * WORDS_PER_MINUTE)
 MAX_LONG_BEATS = max(3, min(12, round(TARGET_WORDS / 60)))
 WORDS_PER_BEAT = max(25, round(TARGET_WORDS / MAX_LONG_BEATS))
+
+# --- Dialogue ---------------------------------------------------------------
+# Two characters talking to each other instead of one narrator reading at the
+# camera. Everything else about the 3D scene already assumed two people; only
+# the script never did, so both mouths were fed the same monologue and the
+# speaker alternated on a counter.
+#
+# It also changes the arithmetic of length. A narrated beat is ~55 words
+# because it is a whole thought; a spoken line is 8 to 16 because that is how
+# people talk. The same runtime therefore holds four to five times as many
+# beats -- and since the assembler cuts once per beat, four to five times as
+# many cuts. A 23-second unbroken shot was its own argument for this.
+DIALOGUE = os.getenv("DIALOGUE", "true").strip().lower() == "true"
+WORDS_PER_LINE = int(os.getenv("WORDS_PER_LINE", "12"))
+MAX_DIALOGUE_LINES = max(4, min(40, round(TARGET_WORDS / WORDS_PER_LINE)))
+
+# What a character is doing while a line is said. One vocabulary, three
+# consumers: the script writer may only emit these, the voice reads the line
+# with that action's delivery, and the 3D scene plays that action's animation.
+# Keeping it to one list is the point -- an action the writer can name but the
+# renderer cannot play is a character who says "hahaha" while standing still.
+ACTIONS = ("talk", "ask", "laugh", "surprise", "think", "run", "fight", "jump")
+DEFAULT_ACTION = "talk"
 
 # --- Content mode -----------------------------------------------------------
 # "news"      trending topic -> researched, fact-checked script

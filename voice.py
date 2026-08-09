@@ -22,6 +22,42 @@ TICKS_PER_SECOND = 10_000_000  # edge-tts reports offsets in 100-nanosecond tick
 MAX_LINE_CHARS = 40
 MAX_LINE_WORDS = 7
 
+# How each action is delivered, as (rate delta %, pitch delta Hz) on top of the
+# speaker's own settings. edge-tts exposes no style or emotion for Hindi -- the
+# hi-IN voices take rate and pitch and nothing else -- so this is the whole
+# available range, and it turns out to be enough: a line read 18% faster and a
+# tone higher is audibly a laugh, and one read slowly and low is audibly
+# someone thinking.
+DELIVERY = {
+    "talk":     (0, 0),
+    "ask":      (2, 12),      # questions lift at the end; a nudge up stands in
+    "laugh":    (18, 25),
+    "surprise": (10, 30),
+    "think":    (-12, -12),
+    "run":      (20, 15),     # out of breath, hurrying
+    "fight":    (12, 8),
+    "jump":     (15, 22),
+}
+
+
+def _shift(setting: str, delta: int, unit: str) -> str:
+    """Add a delta to an edge-tts "+8%" / "-5Hz" style setting."""
+    try:
+        base = int(str(setting).rstrip("%Hhz").strip() or 0)
+    except ValueError:
+        base = 0
+    return f"{base + delta:+d}{unit}"
+
+
+def _delivery(beat: dict) -> tuple:
+    """(voice, rate, pitch) for this line."""
+    second = beat.get("speaker") == 1
+    voice = config.VOICE_B if second else config.VOICE
+    rate = config.VOICE_B_RATE if second else config.VOICE_RATE
+    pitch = config.VOICE_B_PITCH if second else config.VOICE_PITCH
+    d_rate, d_pitch = DELIVERY.get(beat.get("action"), (0, 0))
+    return voice, _shift(rate, d_rate, "%"), _shift(pitch, d_pitch, "Hz")
+
 
 def _split_sentence(sentence: dict) -> list:
     """Spread a sentence's timing across its words, weighted by word length.
@@ -45,9 +81,11 @@ def _split_sentence(sentence: dict) -> list:
     return out
 
 
-async def _synth_one(text: str, out_path: Path) -> list:
+async def _synth_one(text: str, out_path: Path, voice: str = None,
+                     rate: str = None, pitch: str = None) -> list:
     communicate = edge_tts.Communicate(
-        text, config.VOICE, rate=config.VOICE_RATE, pitch=config.VOICE_PITCH,
+        text, voice or config.VOICE,
+        rate=rate or config.VOICE_RATE, pitch=pitch or config.VOICE_PITCH,
         boundary="WordBoundary")
 
     words, sentences = [], []
@@ -125,19 +163,24 @@ def narrate(beats: list, work_dir: Path, label: str) -> dict:
 
     Returns {"audio", "srt", "total", "beats": [{"text","keywords","duration"}]}
     """
+    # A script written as dialogue carries a speaker on every beat, and each
+    # speaker gets their own voice. Without this the two characters on screen
+    # share one voice, and no amount of animation makes that read as two people
+    # talking to each other.
+    two_handed = any("speaker" in b for b in beats)
+
     if config.TTS_ENGINE == "kokoro":
-        speaker = config.KOKORO_VOICE
+        named = config.KOKORO_VOICE
     elif config.TTS_ENGINE == "eleven" and voice_eleven.available():
-        speaker = voice_eleven.voice_for(label)
         chars = voice_eleven.estimate_characters(beats)
         print(f"[4/7] Voice bana raha hoon ({label}, elevenlabs, "
               f"~{chars:,} characters)...")
-        speaker = None
+        named = None
     else:
-        speaker = config.VOICE
-    if speaker is not None:
+        named = f"{config.VOICE} + {config.VOICE_B}" if two_handed else config.VOICE
+    if named is not None:
         print(f"[4/7] Voice bana raha hoon ({label}, {config.TTS_ENGINE}: "
-              f"{speaker})...")
+              f"{named})...")
     audio_dir = work_dir / f"audio_{label}"
     audio_dir.mkdir(parents=True, exist_ok=True)
 
@@ -159,18 +202,20 @@ def narrate(beats: list, work_dir: Path, label: str) -> dict:
                 pass                      # already synthesised in one batch
             elif config.TTS_ENGINE == "eleven" and voice_eleven.available():
                 try:
-                    voice_eleven.synth(beat["text"], part, label)
+                    voice_eleven.synth(beat["text"], part, label,
+                                       speaker=beat.get("speaker"),
+                                       action=beat.get("action"))
                 except voice_eleven.QuotaGone:
                     # Credits gone mid-video. Finish on edge-tts rather than
                     # abandon a video that is most of the way done.
                     print("    [!] ElevenLabs credits khatam — "
                           "baaki beats edge-tts par")
-                    words = await _synth_one(beat["text"], part)
+                    words = await _synth_one(beat["text"], part, *_delivery(beat))
                 except RuntimeError as exc:
                     print(f"    [!] ElevenLabs fail ({str(exc)[:70]}) — edge-tts par")
-                    words = await _synth_one(beat["text"], part)
+                    words = await _synth_one(beat["text"], part, *_delivery(beat))
             else:
-                words = await _synth_one(beat["text"], part)
+                words = await _synth_one(beat["text"], part, *_delivery(beat))
             seconds = _duration(part)
             if not words:
                 # Kokoro emits audio only, no boundary events. Spreading the
@@ -187,7 +232,10 @@ def narrate(beats: list, work_dir: Path, label: str) -> dict:
             word_groups.append(shifted)
             parts.append({**beat, "file": part, "duration": seconds})
             offset += seconds
-            print(f"    beat {i + 1}/{len(beats)}  {seconds:5.1f}s")
+            who = ("  A" if beat.get("speaker") == 0 else
+                   "  B" if beat.get("speaker") == 1 else "")
+            act = f" {beat['action']}" if beat.get("action") else ""
+            print(f"    beat {i + 1}/{len(beats)}  {seconds:5.1f}s{who}{act}")
 
     asyncio.run(run_all())
 
@@ -213,6 +261,10 @@ def narrate(beats: list, work_dir: Path, label: str) -> dict:
         "audio": combined,
         "srt": srt,
         "total": total,
-        "beats": [{"text": p["text"], "keywords": p["keywords"], "duration": p["duration"]}
+        # speaker and action travel with the beat: the 3D scene needs to know
+        # whose mouth moves and what the pair are doing while it does.
+        "beats": [{"text": p["text"], "keywords": p["keywords"],
+                   "duration": p["duration"], "speaker": p.get("speaker"),
+                   "action": p.get("action")}
                   for p in parts],
     }
