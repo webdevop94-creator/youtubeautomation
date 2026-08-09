@@ -1,7 +1,8 @@
 .env
 .youtube_token.json
 output/
-music/
+# music/ is committed now: it is 1.5 MB of background tracks, and a cloud
+# runner that cannot find them publishes silent videos without saying so.
 __pycache__/
 *.pyc
 .venv/
