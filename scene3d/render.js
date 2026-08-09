@@ -98,12 +98,26 @@ const CHROME = [
   ]);
   ff.stderr.on('data', d => process.stderr.write(String(d)));
 
-  for (let i = 0; i < frames; i++) {
-    const dataUrl = await page.evaluate(
-      (t, spk, lv, wd, sh) => window.__renderFrame(t, spk, lv, wd, sh),
-      i / fps, job.speaker || 0, at(levels, i, 0.5), at(spread, i, 0.4),
-      job.shot || 'wide');
-    ff.stdin.write(Buffer.from(dataUrl.split(',')[1], 'base64'));
+  // Frames go over in batches. One evaluate per frame spent most of its time
+  // on the crossing rather than the drawing -- halving the pixel count only
+  // bought 34%, which is what proved it. Batching amortises the round trip
+  // over BATCH frames; larger is faster but holds that many encoded JPEGs in
+  // page memory at once.
+  const BATCH = Math.max(1, +(process.env.RENDER_BATCH || 12));
+  for (let i = 0; i < frames; i += BATCH) {
+    const n = Math.min(BATCH, frames - i);
+    const lv = [], wd = [];
+    for (let k = 0; k < n; k++) {
+      lv.push(at(levels, i + k, 0.5));
+      wd.push(at(spread, i + k, 0.4));
+    }
+    const urls = await page.evaluate(
+      (t0, dt, count, spk, l, w, sh) =>
+        window.__renderBatch(t0, dt, count, spk, l, w, sh),
+      i / fps, 1 / fps, n, job.speaker || 0, lv, wd, job.shot || 'wide');
+    for (const dataUrl of urls) {
+      ff.stdin.write(Buffer.from(dataUrl.split(',')[1], 'base64'));
+    }
   }
   ff.stdin.end();
   await new Promise(res => ff.on('close', res));

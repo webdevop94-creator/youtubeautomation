@@ -18,6 +18,7 @@ enough.
 import array
 import json
 import math
+import os
 import shutil
 import subprocess
 from pathlib import Path
@@ -80,9 +81,14 @@ ACTION_CLIPS = {
     "surprise": ["anim_surprise.fbx", "Surprised.fbx"],
     "think":    ["anim_think.fbx", "Thinking.fbx"],
     "run":      ["anim_run.fbx", "Running.fbx", "Fast Run.fbx"],
-    "fight":    ["anim_fight.fbx", "Capoeira.fbx", "Boxing.fbx",
-                 "Punching.fbx", "Fighting.fbx"],
-    "jump":     ["anim_jump.fbx", "Jumping.fbx", "Jump.fbx", "char_jump.fbx"],
+    # Capoeira first on purpose. This plays to families, and a martial art that
+    # looks like dancing reads as a scuffle between friends; "Punch To Elbow
+    # Combo" reads as someone being hit. The punch clips stay as fallbacks for
+    # a library that has them and not the other.
+    "fight":    ["anim_fight.fbx", "Capoeira.fbx", "Fighting Idle.fbx",
+                 "Punch To Elbow Combo.fbx", "Boxing.fbx", "Punching.fbx"],
+    "jump":     ["anim_jump.fbx", "Jumping.fbx", "Jump.fbx",
+                 "Dancing Running Man.fbx", "char_jump.fbx"],
 }
 # The talking clip is the one file this cannot run without, and it is also a
 # character rather than a bare animation, so it is named separately.
@@ -100,9 +106,17 @@ def _action_clip(action: str) -> str:
     return f"./assets/mixamo/{TALK_FALLBACK}"
 
 # Rendered small and scaled up by video.build. Frame cost grows with pixels and
-# nothing in the scene carries detail that survives a 720p -> 1080p trip.
-LANDSCAPE = (1280, 720)
-VERTICAL = (720, 1280)
+# nothing in the scene carries detail that survives the trip up to 1080p.
+#
+# Tunable because the two machines that render are not comparable. This laptop
+# reaches ~12 fps through ANGLE's default backend; a cloud runner has no GPU at
+# all and falls back to pure software, where the same job took 56 minutes. Cost
+# scales with pixel count, so 720 -> 540 is a little over half the work for a
+# difference no one watching a flat-shaded cartoon on a phone will find.
+RENDER_HEIGHT = int(os.getenv("RENDER_HEIGHT", "720"))
+_W = round(RENDER_HEIGHT * 16 / 9 / 2) * 2      # even numbers: h264 needs them
+LANDSCAPE = (_W, RENDER_HEIGHT)
+VERTICAL = (RENDER_HEIGHT, _W)
 
 RENDER_TIMEOUT = 900
 

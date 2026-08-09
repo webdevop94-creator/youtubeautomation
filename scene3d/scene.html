@@ -969,6 +969,23 @@ window.__renderFrame = (t, speaker, level, wide, shot) => {
   return renderer.domElement.toDataURL('image/jpeg', 0.92);
 };
 
+/** Several frames in one call.
+ *
+ * The renderer used to be driven one frame at a time from node, and each of
+ * those frames paid for a page.evaluate round trip, a JPEG encode, a base64
+ * string across the bridge and a decode on the other side. Measured on this
+ * laptop, halving the pixel count only bought 34% -- which is what says the
+ * cost was never the pixels. It was the crossing.
+ */
+window.__renderBatch = (t0, dt, n, speaker, levels, wides, shot) => {
+  const out = [];
+  for (let i = 0; i < n; i++) {
+    out.push(window.__renderFrame(t0 + i * dt, speaker,
+                                  levels[i], wides[i], shot));
+  }
+  return out;
+};
+
 window.__info = () => ({
   ready: !!window.__ready, error: window.__error || null,
   clips: window.__clips || [],

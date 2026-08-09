@@ -110,10 +110,24 @@ story word for word.""",
 Panchatantra spirit -- animals or village folk, a simple problem, a clear
 moral at the end. Original: do not retell a known story word for word.
 
+Build the story so that it CONTAINS both of these, because they are what the
+video shows:
+  a CHASE -- somebody runs, and somebody runs after them. Give those lines
+  action "run", and write them so the running is what the line is about.
+  a CONFRONTATION -- two of the characters in the story argue or scuffle face
+  to face. Give those lines action "fight". Playful or comic, never cruel.
+Do not announce them. A fox raiding a field and the farmer tearing after her
+is a chase; the fox and the crow snapping at each other over the stolen corn
+is a confrontation. The story should want both anyway.
+
 रिया is the audience and must behave like one: she interrupts with questions
 (action "ask"), gasps at the turn (action "surprise"), laughs at the funny
-part, and says the moral back in her own words at the end. When आर्यन acts out
-a chase inside the story, use action "run".""",
+part, and says the moral back in her own words at the end.
+
+In long_beats the story must REACH ITS ENDING and state its moral. Do not stop
+partway and send the viewer off to watch the full video -- long_beats IS the
+full video, and a story that breaks off before its own ending is the worst
+thing you can hand back. (shorts_beats is the trailer and may point at it.)""",
         "scene_hint": "the setting of that moment -- a forest clearing, a river bank, "
                       "a village path, a tree with birds",
     },
