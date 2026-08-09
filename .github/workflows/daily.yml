@@ -127,6 +127,10 @@ jobs:
         env:
           CHROME_PATH: /usr/bin/google-chrome
           PYTHONIOENCODING: utf-8
+          # Without this the log stops at whatever filled the last 8 KB buffer
+          # and stays there for twenty minutes, which is indistinguishable from
+          # a hung render while you are watching it.
+          PYTHONUNBUFFERED: "1"
         run: |
           python agent.py \
             --count "${{ inputs.count || '1' }}" \
