@@ -26,6 +26,10 @@ on:
       kind:
         description: "stories / facts / riddles / jokes (khaali = rotation)"
         default: ""
+      upload:
+        description: "YouTube par upload karein? false = sirf video banao"
+        type: boolean
+        default: true
 
 # One run at a time. Two agents at once share one history.json with no locking
 # between them, so they can pick the same topic and overwrite each other's
@@ -137,10 +141,15 @@ jobs:
           # a hung render while you are watching it.
           PYTHONUNBUFFERED: "1"
         run: |
+          # The event check is not decoration. On a scheduled run `inputs` is
+          # null, and GitHub compares mismatched types by casting to a number --
+          # so `null == false` is TRUE. Without the guard every scheduled
+          # morning would run --no-upload, finish green, and publish nothing.
           python agent.py \
             --count "${{ inputs.count || '1' }}" \
             --privacy "${{ inputs.privacy || 'public' }}" \
-            ${{ inputs.kind && format('--kind {0}', inputs.kind) || '' }}
+            ${{ inputs.kind && format('--kind {0}', inputs.kind) || '' }} \
+            ${{ (github.event_name == 'workflow_dispatch' && inputs.upload == false) && '--no-upload' || '' }}
 
       - name: Remember what was covered
         # The duplicate guard is only useful if it survives the runner, which
@@ -154,6 +163,22 @@ jobs:
           git diff --cached --quiet || git commit -m "history: $(date -u +%F) ka run"
           git pull --rebase --autostash || true
           git push || echo "history push nahi hua, agla run dobara koshish karega"
+
+      - name: Keep the test videos
+        # Only on a --no-upload test run. A test whose output you cannot watch
+        # proves the pipeline did not crash and nothing else, and the whole
+        # point of testing this one is to look at the visuals. Not done on
+        # scheduled runs: those publish to YouTube, so a second ~60 MB copy in
+        # artifact storage every morning buys nothing.
+        if: always() && github.event_name == 'workflow_dispatch' && inputs.upload == false
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-videos
+          path: |
+            output/**/*.mp4
+            output/**/thumbnail.jpg
+          if-no-files-found: ignore
+          retention-days: 7
 
       - name: Keep the logs
         if: always()
