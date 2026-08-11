@@ -259,7 +259,8 @@ def _render_and_upload(script: dict, topic: dict, work_dir, args) -> dict:
 
     thumb = thumbnail_mod.make_thumbnail(
         script.get("thumbnail_text", script["title"]), primary_assets,
-        work_dir / "thumbnail.jpg")
+        work_dir / "thumbnail.jpg", script=script,
+        category=topic.get("category", ""))
 
     chapters = pipeline.chapter_list(primary_narration) if primary_key == "long" else []
     description = pipeline.build_description(script, chapters)

@@ -164,7 +164,8 @@ def run(args) -> None:
 
     thumb = thumbnail_mod.make_thumbnail(
         script.get("thumbnail_text", script["title"]), primary_assets,
-        work_dir / "thumbnail.jpg")
+        work_dir / "thumbnail.jpg", script=script,
+        category=script.get("category", ""))
 
     chapters = chapter_list(primary_narration) if primary_key == "long" else []
     description = build_description(script, chapters)
