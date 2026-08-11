@@ -124,18 +124,19 @@ ALLOWED_CATEGORIES = _csv("ALLOWED_CATEGORIES", "")
 # Only worth enabling for a subject stock genuinely does not cover.
 USE_AI_VISUALS = os.getenv("USE_AI_VISUALS", "false").strip().lower() == "true"
 
-# "photo"     generated stills that look like photography (default)
-# "animation" illustrated frames in one consistent style
-# "3d"        real 3D cartoon characters acting the beats out (scene3d/)
+# What the generated fallback stills look like, on the beats where stock has
+# nothing:
 #
-# Animation only works for subjects whose scenes do not need a recurring
-# character. Holding a character across scenes was tested twice and failed
-# both times -- the same frozen description and seed produced a different
-# character every scene. Style, unlike character, holds fine.
+#   "photo"     stills that look like photography (default, and what the
+#               channel uses -- they sit next to real footage and have to
+#               match it)
+#   "animation" illustrated frames in one consistent style
 #
-# "3d" is the one that does hold a character, because it is the same model
-# every frame rather than a fresh guess. It costs about two minutes of
-# rendering per minute of video and needs node plus Chrome.
+# "3d" -- real 3D cartoon characters rendered in scene3d/ under node and
+# Chrome -- was the third option and is gone at the owner's call, along with
+# the renderer and its assets. The channel is world facts over real footage;
+# a cartoon cast was never what that wanted. `git log` has it if it is ever
+# needed again.
 VISUAL_STYLE = os.getenv("VISUAL_STYLE", "photo").strip().lower()
 
 # --- Length -----------------------------------------------------------------

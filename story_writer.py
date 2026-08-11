@@ -63,7 +63,16 @@ appearance.""",
     },
     "facts": {
         "hindi": "रोचक तथ्य",
-        "category": "science",
+        # "world", not "science": this drives the stock fallbacks and the
+        # generated-still style, and world facts want city streets, markets and
+        # coastlines rather than the laboratory-and-telescope set that
+        # "science" reaches for.
+        "category": "world",
+        # Filed under Education on YouTube, though. The "world" category maps
+        # to News & Politics for the news pipeline, which is right for actual
+        # news and wrong for an explainer -- browse and suggested treat the two
+        # very differently, and that is where a new channel gets its views.
+        "yt_category": "education",
         "brief": """Write {n} surprising, TRUE facts about the WORLD -- countries, cities,
 places, landscapes, cultures and customs, languages, food, wildlife, oceans,
 and the odd corners of history that go with them. Each fact is ONE beat of
@@ -484,6 +493,7 @@ def write_story(kind: str = "jokes", n_beats: int = None) -> dict:
     data["tags"] = [str(t).lower().strip()[:30] for t in (data.get("tags") or [])][:15]
     data["sources"] = []
     data["category"] = spec["category"]
+    data["yt_category"] = spec.get("yt_category", spec["category"])
     data["kind"] = kind
 
     words = sum(len(b["text"].split()) for b in data["long_beats"])
