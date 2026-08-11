@@ -131,7 +131,6 @@ jobs:
 
       - name: Build and upload
         env:
-          CHROME_PATH: /usr/bin/google-chrome
           PYTHONIOENCODING: utf-8
           # Without this the log stops at whatever filled the last 8 KB buffer
           # and stays there for twenty minutes, which is indistinguishable from
