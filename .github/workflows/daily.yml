@@ -8,13 +8,23 @@ name: Daily videos
 
 on:
   schedule:
-    # GitHub cron is UTC. 01:30 UTC = 07:00 IST, 02:30 UTC = 08:00 IST.
+    # GitHub cron is UTC, and IST is UTC+5:30 -- so 01:30 UTC is 07:00 IST and
+    # each entry below is the next hour: 7, 8, 9, 10 and 11 in the morning.
     # Worth knowing: scheduled runs are queued, not guaranteed on the minute --
     # GitHub delays them under load, sometimes by up to an hour. If the exact
-    # hour matters, this is the wrong tool; if "once each morning" matters, it
-    # is the right one.
+    # hour matters, this is the wrong tool; if "five through the morning"
+    # matters, it is the right one.
+    #
+    # Five runs a day is ten YouTube uploads, because every run publishes both
+    # the long video and the Short. That is the daily upload allowance almost
+    # exactly, so a retry anywhere in the day is what tips it over -- the
+    # eleventh upload is refused, not queued. If that starts happening, the
+    # lever is --format long on some of these runs, not a sixth hour.
     - cron: "30 1 * * *"
     - cron: "30 2 * * *"
+    - cron: "30 3 * * *"
+    - cron: "30 4 * * *"
+    - cron: "30 5 * * *"
   workflow_dispatch:
     inputs:
       count:
@@ -123,9 +133,10 @@ jobs:
           # this alone, so it comes out at 4 facts of ~54 words rather than
           # needing either number set by hand.
           MAX_VIDEO_MINUTES=1.5
-          # 45 days of history is the avoid-list the writer is handed, and at
-          # two videos a day that is 90 fact sets it must not repeat. Long
-          # enough to matter, short enough that the brief stays readable.
+          # How far back the duplicate guard looks. At five videos a day that
+          # is 225 fact sets it must not repeat -- and the writer's brief does
+          # not grow with it, because history.covered_topics caps what it hands
+          # over at the 60 newest either way.
           HISTORY_DAYS=45
           FPS=30
           MUSIC_VOLUME_DB=-22
