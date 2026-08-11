@@ -20,6 +20,7 @@ YT_CATEGORY = {
     "business": "27",
     "health": "27",
     "general": "27",
+    "education": "27",
 }
 
 

@@ -56,6 +56,29 @@ be been being do does did get got make made take took come came go went know kne
 think thought see saw look looked want wanted give gave use used find found tell
 told ask asked work worked seem seemed feel felt try tried leave left call called""".split())
 
+# The same job for Devanagari. Without this, keywords() returned an empty set
+# for every Hindi title -- and history.is_duplicate gives up below three
+# keywords, so the duplicate guard was silently switched off for the entire
+# animation channel. Every video it built passed the check by producing nothing
+# to check.
+#
+# Alongside the ordinary grammar words sit the ones that name the FORMAT rather
+# than the subject: चुटकुले, पहेली, कहानी, तथ्य. Two joke videos share those by
+# definition, so leaving them in would make every joke set look like a repeat
+# of the last one.
+STOP_HI = set("""का की के को में से पर है हैं था थी थे और या भी ही तो जो वो यह ये वह इस उस
+कि क्या क्यों कैसे कब कहाँ कौन एक दो तीन चार पाँच पांच सब कुछ बहुत ज़्यादा ज्यादा कम अब फिर
+तब हम तुम आप मैं मेरा तेरा उनका अपना नहीं ना हाँ लिए साथ बाद पहले लेकिन मगर अगर तक द्वारा
+वाले वाला वाली करने करना किया किये करते होता होती होते होने हुआ हुई हुए गया गयी गए देगा
+देंगे रहा रही रहे सकता सकती सकते चाहिए दिया देना लगा लगी बना बनी बने
+चुटकुले चुटकुला जोक्स जोक हँसी हंसी मजेदार मज़ेदार पहेली पहेलियाँ पहेलियां कहानी कहानियाँ
+कहानियां तथ्य रोचक हैरान हैरत अजीब अनोखे अनोखा दिलचस्प मजा मज़ा हिंदी हिन्दी बच्चों वीडियो
+दुनिया सबसे टॉप देने देखो जानिए जानें""".split())
+
+# Latin letters, or a Devanagari run. Hindi titles carry no spaces inside a
+# word, so a plain character-class run is the whole word.
+_WORD_RE = re.compile(r"[a-zA-Z][a-zA-Z0-9'\-]{2,}|[ऀ-ॿ]{2,}")
+
 # --- Category routing ------------------------------------------------------
 # Google News section topics -> our internal category label.
 NEWS_SECTIONS = {
@@ -213,9 +236,17 @@ def _tag(node) -> str:
 
 
 def keywords(text: str) -> set:
-    """Content words used for clustering and duplicate detection."""
-    words = re.findall(r"[a-zA-Z][a-zA-Z0-9'\-]{2,}", text.lower())
-    return {w.strip("'-") for w in words if w not in STOP and len(w) > 2}
+    """Content words used for clustering and duplicate detection.
+
+    Handles both scripts: the English headlines the trending feeds return, and
+    the Devanagari titles the animation channel actually publishes under.
+    """
+    keys = set()
+    for word in _WORD_RE.findall(text.lower()):
+        word = word.strip("'-")
+        if len(word) > 2 and word not in STOP and word not in STOP_HI:
+            keys.add(word)
+    return keys
 
 
 def classify(text: str, given: str = "") -> str:

@@ -69,6 +69,35 @@ def _fallbacks(category: str) -> list:
     return FALLBACKS.get(category, FALLBACKS["general"])
 
 
+# Subjects no stock library has actually filmed. A camera has never been to
+# Venus, inside a pyramid's burial chamber, or alongside a live giant squid --
+# so a search for one returns whatever was closest in shape or colour, and
+# "venus rotating" came back as a spinning disco ball. Generation draws the
+# thing itself, which is the whole reason to keep it in the pipeline.
+# Deliberately short. The first version of this list also held shark, whale,
+# jellyfish, galaxy, tomb and brain -- and stock is full of all of them, so it
+# sent three of four beats to generation and the video came back mostly stills,
+# which is the opposite of the point. Only what a camera has genuinely never
+# pointed at belongs here.
+NEVER_FILMED = {
+    # named planets as bodies -- no footage exists, and the search returns
+    # whatever else was round and shiny
+    "venus", "mars", "jupiter", "saturn", "mercury", "neptune", "uranus",
+    "pluto",
+    # extinct
+    "dinosaur", "mammoth", "prehistoric", "trilobite", "pterodactyl",
+    # smaller than a lens
+    "virus", "bacteria", "atom", "molecule", "neuron", "microscopic",
+    # never existed
+    "dragon", "pharaoh", "mummy", "unicorn",
+}
+
+
+def _needs_generating(keywords: str) -> bool:
+    words = {w.lower() for w in re.findall(r"[a-zA-Z]{3,}", keywords)}
+    return bool(words & NEVER_FILMED)
+
+
 def _headers():
     config.require_key("PEXELS_API_KEY", config.PEXELS_API_KEY,
                        "https://www.pexels.com/api/")
@@ -212,7 +241,21 @@ ANIMATION_STYLE = ("cinematic illustrated animation still, bold clean shapes, "
                    "look, no text, no watermark, no letters, no logos")
 
 
-def _gen_prompt(keywords: str, category: str) -> str:
+# Rotated per beat so consecutive generated frames are not the same colour.
+# With one fixed style suffix every image came back in the same palette --
+# a run of purple-blue frames, whatever the subject was -- because the model
+# reads the suffix as the strongest instruction in the prompt.
+PALETTES = [
+    "warm golden hour light, amber and cream tones",
+    "cool daylight, clean blues and soft whites",
+    "rich green and earth tones, dappled sunlight",
+    "deep sunset reds and oranges, long shadows",
+    "crisp cold light, teal and silver tones",
+    "soft pink and lilac dusk light",
+]
+
+
+def _gen_prompt(keywords: str, category: str, index: int = 0) -> str:
     """Full scene description, unlike the stock query.
 
     _clean_query truncates to three words because search APIs do better with
@@ -223,17 +266,18 @@ def _gen_prompt(keywords: str, category: str) -> str:
                      if w.lower() not in DROP)
     if not scene:
         scene = random.choice(_fallbacks(category))
+    palette = PALETTES[index % len(PALETTES)]
     if config.VISUAL_STYLE == "animation":
-        return f"{scene}, {ANIMATION_STYLE}"
+        return f"{scene}, {palette}, {ANIMATION_STYLE}"
     style = GEN_STYLE.get(category, GEN_STYLE["general"])
-    return f"{scene}, {style}, {GEN_NEGATIVE}"
+    return f"{scene}, {palette}, {style}, {GEN_NEGATIVE}"
 
 
 def _generate_image(keywords: str, category: str, vertical: bool, dest: Path,
-                    seed: int) -> bool:
+                    seed: int, index: int = 0) -> bool:
     """Draw this beat's scene. Returns False so the caller can fall back."""
     width, height = (720, 1280) if vertical else (1280, 720)
-    url = (IMAGE_GEN_API + urllib.parse.quote(_gen_prompt(keywords, category))
+    url = (IMAGE_GEN_API + urllib.parse.quote(_gen_prompt(keywords, category, index))
            + f"?width={width}&height={height}&seed={seed}&nologo=true&model=flux")
     try:
         resp = requests.get(url, timeout=GEN_TIMEOUT)
@@ -314,26 +358,59 @@ def fetch_visuals(beats: list, work_dir: Path, vertical: bool, label: str,
     media_dir.mkdir(parents=True, exist_ok=True)
 
     used, assets = set(), []
+    moving = 0
     for i, beat in enumerate(beats):
         query = _clean_query(beat["keywords"], category)
+
+        # Some subjects stock has never filmed, and asking anyway is worse than
+        # not asking: Pexels answered "venus rotating" with a spinning disco
+        # ball, because it had nothing else round and shiny. A miss returns
+        # nothing and falls through to generation; a wrong hit does not, and
+        # ends up in the video.
+        if config.USE_AI_VISUALS and _needs_generating(beat["keywords"]):
+            dest = media_dir / f"beat_{i:02d}.jpg"
+            if _generate_image(beat["keywords"], category, vertical, dest,
+                               seed=1000 + i * 17, index=i):
+                assets.append({"path": dest, "ext": ".jpg", "is_image": True,
+                               "url": "", "credit": "AI generated"})
+                print(f"    beat {i + 1}/{len(beats)}  '{query}' -> AI image "
+                      f"(stock is cheez ko film nahi karta)")
+                continue
+
+        # Real footage first, generated stills only where footage runs out.
+        #
+        # The order used to be the other way round whenever AI visuals were on,
+        # and that made every single beat a still with a slow pan across it --
+        # which is not a video, and is the thing the channel owner has now said
+        # three times. Pollinations cannot return motion at all; Pexels can.
+        # So Pexels is asked first for every beat, and generation is what
+        # catches the beats stock has never heard of.
+        asset = _search_video(query, vertical, used)
+        if not asset:  # narrower query failed — try the first keyword alone
+            asset = _search_video(query.split()[0], vertical, used)
+
+        if asset:
+            dest = media_dir / f"beat_{i:02d}{asset['ext']}"
+            if _download(asset["url"], dest):
+                assets.append({**asset, "path": dest})
+                moving += 1
+                print(f"    beat {i + 1}/{len(beats)}  '{query}' -> video (stock)")
+                continue
+            asset = None
 
         if config.USE_AI_VISUALS:
             dest = media_dir / f"beat_{i:02d}.jpg"
             # Distinct seed per beat: one seed for the whole video makes every
             # scene a variation of the same picture.
             if _generate_image(beat["keywords"], category, vertical, dest,
-                               seed=1000 + i * 17):
+                               seed=1000 + i * 17, index=i):
                 assets.append({"path": dest, "ext": ".jpg", "is_image": True,
                                "url": "", "credit": "AI generated"})
-                print(f"    beat {i + 1}/{len(beats)}  '{query}' -> AI image")
+                print(f"    beat {i + 1}/{len(beats)}  '{query}' -> AI image "
+                      f"(stock mein nahi mila)")
                 continue
-            print(f"    beat {i + 1}/{len(beats)}  AI fail, stock try kar raha hoon")
 
-        asset = _search_video(query, vertical, used)
-        if not asset:  # narrower query failed — try the first keyword alone
-            asset = _search_video(query.split()[0], vertical, used)
-        if not asset:
-            asset = _search_photo(query, vertical, used)
+        asset = _search_photo(query, vertical, used)
         if not asset:
             asset = _search_video(random.choice(_fallbacks(category)), vertical, used)
 
@@ -341,13 +418,15 @@ def fetch_visuals(beats: list, work_dir: Path, vertical: bool, label: str,
             dest = media_dir / f"beat_{i:02d}{asset['ext']}"
             if _download(asset["url"], dest):
                 assets.append({**asset, "path": dest})
+                moving += 0 if asset["is_image"] else 1
                 print(f"    beat {i + 1}/{len(beats)}  '{query}' -> "
-                      f"{'photo' if asset['is_image'] else 'video'} (stock)")
+                      f"{'photo' if asset['is_image'] else 'video'} (stock fallback)")
                 continue
 
         assets.append(None)
         print(f"    beat {i + 1}/{len(beats)}  '{query}' -> koi clip nahi, text card lagega")
 
     found = sum(1 for a in assets if a)
-    print(f"    {found}/{len(beats)} clips mile")
+    print(f"    {found}/{len(beats)} mile — {moving} chalti hui video, "
+          f"{found - moving} still")
     return assets

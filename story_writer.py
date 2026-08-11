@@ -17,6 +17,7 @@ recurring hero would need reference-image conditioning, which is paid.
 import json
 import re
 
+import history
 import config
 import script_writer as sw
 
@@ -62,12 +63,32 @@ appearance.""",
     },
     "facts": {
         "hindi": "रोचक तथ्य",
-        "category": "science",
-        "brief": """Write {n} surprising, TRUE facts about space, oceans, animals, the
-human body, history or technology. Each fact is ONE beat of about {w} words: state
-it, then explain why it is surprising. Only well-established facts that a
-curious adult could verify -- no rumours, no "scientists say" without saying
-who. If you are unsure a fact is true, choose a different one.""",
+        # "world", not "science": this drives the stock fallbacks and the
+        # generated-still style, and world facts want city streets, markets and
+        # coastlines rather than the laboratory-and-telescope set that
+        # "science" reaches for.
+        "category": "world",
+        # Filed under Education on YouTube, though. The "world" category maps
+        # to News & Politics for the news pipeline, which is right for actual
+        # news and wrong for an explainer -- browse and suggested treat the two
+        # very differently, and that is where a new channel gets its views.
+        "yt_category": "education",
+        "brief": """Write {n} surprising, TRUE facts about the WORLD -- countries, cities,
+places, landscapes, cultures and customs, languages, food, wildlife, oceans,
+and the odd corners of history that go with them. Each fact is ONE beat of
+about {w} words: state it, then explain why it is surprising.
+
+Every fact must be about a DIFFERENT country or region. Do not spend two beats
+in the same place, and do not build the whole video out of one continent.
+
+Reach past the famous ones. "Venus has a long day", "honey never spoils" and
+"an octopus has three hearts" are what every list already opens with; a viewer
+who has seen one of these videos has seen those. Prefer a fact about a real,
+namable place that most people could not have guessed.
+
+Only well-established facts that a curious adult could verify -- no rumours,
+and no "scientists say" without saying who. If you are unsure a fact is true,
+choose a different one.""",
         "dialogue": """आर्यन and रिया are two friends. Write about {j} surprising, TRUE facts
 about space, oceans, animals, the human body, history or technology, delivered
 as their conversation.
@@ -80,8 +101,10 @@ and at least one fact should end in laughter.
 Only well-established facts a curious adult could verify. No rumours, and no
 "scientists say" without saying who. If you are unsure a fact is true, choose
 a different one.""",
-        "scene_hint": "the thing the fact is about -- a planet, a deep sea creature, "
-                      "a desert, a laboratory, an ancient ruin",
+        "scene_hint": "the real place the fact is about, named -- a named desert, "
+                      "coastline, mountain range, city street, market, ruin or "
+                      "animal in its habitat. Stock footage has to be findable "
+                      "from these words, so name the thing rather than the idea",
     },
     "riddles": {
         "hindi": "पहेलियाँ",
@@ -206,6 +229,18 @@ THIS IS A TWO-CHARACTER SCENE, NOT NARRATION.
 - Alternate speakers most of the time. Two lines in a row from the same
   character is fine occasionally; four is a monologue.
 
+KEYWORDS name WHAT IS BEING TALKED ABOUT, never who is talking or how they
+feel. The two characters are heard, not seen -- the screen shows the subject.
+
+This matters most on the reaction lines. When रिया gasps at the octopus, the
+keywords are still the octopus: "giant octopus swimming reef". Write "surprised
+girl gasping" and the footage becomes a stranger in a stock library pulling a
+face, which has nothing to do with the sentence being spoken over it.
+
+Keep the subject on screen across a whole exchange. Three lines about honey get
+three different shots OF HONEY -- a jar, a spoon lifting, a hive -- not one of
+honey and two of people discussing it.
+
 ACTION -- what the character is DOING while saying the line. Choose exactly one
 of: {actions}.
 
@@ -303,6 +338,67 @@ def _clean_dialogue(beats: list) -> list:
     return out
 
 
+def _already_covered(limit: int = 45) -> list:
+    """Titles of what this channel has recently published.
+
+    Both sources, because neither is complete on its own: history.json only
+    grows when agent.py runs, so anything built by hand is invisible to it,
+    and the output folders only survive until housekeeping ages them out.
+
+    Without this the writer kept returning to the same handful of famous
+    facts -- Venus's long day, honey that never spoils, the octopus's three
+    hearts -- because those are what "surprising fact" most strongly means.
+    Two videos in a row opened with Venus.
+    """
+    seen, titles = set(), []
+    try:
+        # Titles AND beat subjects, both out of history.json. The subjects are
+        # the half that matters -- "3 surprising facts" forbids nothing, while
+        # "planet venus spinning space cosmos" forbids exactly the fact that
+        # kept coming back -- and history.json is the only copy of them that
+        # survives a fresh cloud checkout.
+        for text in history.covered_topics():
+            if text not in seen:
+                seen.add(text)
+                titles.append(text)
+    except Exception:
+        pass
+    try:
+        folders = sorted(config.OUTPUT_DIR.glob("*/script.json"),
+                         key=lambda p: p.stat().st_mtime, reverse=True)
+        for path in folders[:limit]:
+            try:
+                data = json.loads(path.read_text(encoding="utf-8"))
+            except Exception:
+                continue
+            t = data.get("title", "").strip()
+            if t and t not in seen:
+                seen.add(t)
+                titles.append(t)
+            # The titles alone are not enough. "3 surprising facts" names
+            # nothing, so the writer cheerfully opened on Venus's long day for
+            # a third time. Each beat's keywords DO name its subject, in
+            # English, which is exactly the list to hand back as off-limits.
+            for beat in data.get("long_beats", []):
+                k = str(beat.get("keywords", "")).strip()
+                if k and k not in seen:
+                    seen.add(k)
+                    titles.append(k)
+    except Exception:
+        pass
+    return titles[:limit]
+
+
+AVOID = """
+ALREADY PUBLISHED ON THIS CHANNEL -- do not cover any of these subjects again,
+and do not open with the same fact as any of them:
+{titles}
+
+Pick subjects that are NOT on that list. If the obvious answer is on it, that
+is a reason to go further, not a reason to repeat it.
+"""
+
+
 def write_story(kind: str = "jokes", n_beats: int = None) -> dict:
     """Generate an original script. Same shape as script_writer.write_script."""
     if kind not in KINDS:
@@ -328,6 +424,15 @@ def write_story(kind: str = "jokes", n_beats: int = None) -> dict:
                 beat_lo=int(beat_words * 0.8), beat_hi=int(beat_words * 1.2),
                 max_words=int(n_beats * beat_words * 1.2))},
         ]
+
+    # What has already gone out, appended to whichever brief was built. Left
+    # to itself the writer returns to the same few famous facts every time --
+    # two videos running opened on Venus's long day.
+    covered = _already_covered()
+    if covered:
+        messages[-1]["content"] += AVOID.format(
+            titles="\n".join(f"- {t}" for t in covered))
+        print(f"    {len(covered)} purane topics se bacha raha hoon")
     data = sw._call_llm(messages)
 
     # Devanagari drift is the one guard that still applies -- the voice cannot
@@ -388,6 +493,7 @@ def write_story(kind: str = "jokes", n_beats: int = None) -> dict:
     data["tags"] = [str(t).lower().strip()[:30] for t in (data.get("tags") or [])][:15]
     data["sources"] = []
     data["category"] = spec["category"]
+    data["yt_category"] = spec.get("yt_category", spec["category"])
     data["kind"] = kind
 
     words = sum(len(b["text"].split()) for b in data["long_beats"])

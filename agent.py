@@ -123,8 +123,7 @@ def tidy(work_dir: Path) -> None:
             freed += part.stat().st_size
             part.unlink(missing_ok=True)
 
-    for folder in ("clips_long", "clips_shorts", "audio_long", "audio_shorts",
-                   "scene3d_long", "scene3d_shorts"):
+    for folder in ("clips_long", "clips_shorts", "audio_long", "audio_shorts"):
         target = work_dir / folder
         if target.is_dir():
             freed += sum(f.stat().st_size for f in target.rglob("*") if f.is_file())
@@ -175,10 +174,14 @@ def build_animation(args, kind: str) -> dict:
 
     script = story_writer.write_story(kind)
 
-    # A joke set is only fresh if it is not the joke set from yesterday.
+    # A fact set is only fresh if it is not yesterday's fact set. Checked on
+    # the script, not just its title: the titles here are generic by design
+    # ("5 हैरान करने वाले तथ्य" names nothing), so the beats are what says
+    # whether this is the Venus video again.
     fake_topic = {"title": script["title"], "category": script["category"],
+                  "yt_category": script.get("yt_category", script["category"]),
                   "related": [], "links": []}
-    duplicate, previous = history.is_duplicate(fake_topic)
+    duplicate, previous = history.is_duplicate(fake_topic, script)
     if duplicate:
         return {"ok": False, "reason": f"bahut milta-julta pehle bana tha: {previous[:50]}"}
 
@@ -277,7 +280,8 @@ def _render_and_upload(script: dict, topic: dict, work_dir, args) -> dict:
             url = youtube_upload.upload(
                 primary_path, script["title"], description, script.get("tags", []),
                 thumb, privacy=privacy,
-                category=youtube_upload.category_id(topic.get("category", "")))
+                category=youtube_upload.category_id(
+                        topic.get("yt_category") or topic.get("category", "")))
         except Exception as exc:
             if is_upload_limit(exc):
                 log("  [X] YouTube ki daily upload limit lag gayi. Video bani "
@@ -293,7 +297,8 @@ def _render_and_upload(script: dict, topic: dict, work_dir, args) -> dict:
                     outputs["shorts"][0], script["title"][:85] + " #shorts",
                     description, script.get("tags", []) + ["shorts"], thumb,
                     privacy=privacy,
-                    category=youtube_upload.category_id(topic.get("category", "")))
+                    category=youtube_upload.category_id(
+                        topic.get("yt_category") or topic.get("category", "")))
                 log(f"  shorts    : {shorts_url}")
             except Exception as exc:
                 # The long-form video is already live; losing the Short is not
@@ -397,6 +402,11 @@ def run(args) -> int:
         log("\n--dry-run: yahin ruk raha hoon, koi video nahi banegi.")
         return 0
 
+    # These were never initialised on this path -- the loop below reads both on
+    # its first line, so the trending mode raised NameError the moment it got
+    # past discovery. It has been dead code since CONTENT_MODE went to
+    # animation, which is why nobody hit it.
+    published, attempts = [], 0
     for topic in topics:
         if len(published) >= args.count or attempts >= config.MAX_TOPIC_ATTEMPTS:
             break

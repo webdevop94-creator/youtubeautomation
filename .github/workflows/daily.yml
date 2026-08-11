@@ -26,6 +26,10 @@ on:
       kind:
         description: "stories / facts / riddles / jokes (khaali = rotation)"
         default: ""
+      upload:
+        description: "YouTube par upload karein? false = sirf video banao"
+        type: boolean
+        default: true
 
 # One run at a time. Two agents at once share one history.json with no locking
 # between them, so they can pick the same topic and overwrite each other's
@@ -49,12 +53,6 @@ jobs:
           python-version: "3.12"
           cache: pip
 
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-          cache: npm
-          cache-dependency-path: scene3d/package-lock.json
-
       - name: System packages
         run: |
           sudo apt-get update -qq
@@ -75,15 +73,6 @@ jobs:
 
       - name: Python deps
         run: pip install -r requirements.txt
-
-      - name: Renderer deps
-        working-directory: scene3d
-        run: npm ci
-
-      - name: Check Chrome
-        run: |
-          which google-chrome || which chromium-browser || which chromium
-          google-chrome --version
 
       - name: Write .env and YouTube token
         env:
@@ -108,15 +97,36 @@ jobs:
           YOUTUBE_CLIENT_SECRET=$YOUTUBE_CLIENT_SECRET
 
           TTS_ENGINE=edge
-          VOICE=hi-IN-MadhurNeural
+          # One narrator, and a female one. The two-character dialogue and the
+          # named cast were both dropped at the owner's call -- the videos are
+          # explainers now, not a two-hander.
+          DIALOGUE=false
+          VOICE=hi-IN-SwaraNeural
           VOICE_RATE=-2%
-          VOICE_B=hi-IN-SwaraNeural
 
           CONTENT_MODE=animation
-          ANIMATION_KINDS=stories,facts,riddles
-          VISUAL_STYLE=3d
-          USE_AI_VISUALS=false
-          MAX_VIDEO_MINUTES=1.1
+          # World facts only, at the owner's call. A fact needs no character
+          # held across scenes -- the one thing generation cannot do -- and a
+          # named place is the one subject Pexels reliably has real footage of,
+          # which riddles and stories do not.
+          ANIMATION_KINDS=facts
+          # photo, not animation. This only governs the beats where stock has
+          # nothing, and those stills sit directly next to real footage -- an
+          # illustrated frame in the middle of filmed clips reads as a mistake.
+          # "animation" here is what was making the videos look like cartoons.
+          VISUAL_STYLE=photo
+          # On, but as the fallback rather than the first choice. Pexels is
+          # asked for real footage on every beat; generation catches the beats
+          # stock has never filmed. See visuals.fetch_visuals.
+          USE_AI_VISUALS=true
+          # 1:30. config derives the beat count and the words per beat from
+          # this alone, so it comes out at 4 facts of ~54 words rather than
+          # needing either number set by hand.
+          MAX_VIDEO_MINUTES=1.5
+          # 45 days of history is the avoid-list the writer is handed, and at
+          # two videos a day that is 90 fact sets it must not repeat. Long
+          # enough to matter, short enough that the brief stays readable.
+          HISTORY_DAYS=45
           FPS=30
           MUSIC_VOLUME_DB=-22
           ENV
@@ -125,17 +135,21 @@ jobs:
 
       - name: Build and upload
         env:
-          CHROME_PATH: /usr/bin/google-chrome
           PYTHONIOENCODING: utf-8
           # Without this the log stops at whatever filled the last 8 KB buffer
           # and stays there for twenty minutes, which is indistinguishable from
           # a hung render while you are watching it.
           PYTHONUNBUFFERED: "1"
         run: |
+          # The event check is not decoration. On a scheduled run `inputs` is
+          # null, and GitHub compares mismatched types by casting to a number --
+          # so `null == false` is TRUE. Without the guard every scheduled
+          # morning would run --no-upload, finish green, and publish nothing.
           python agent.py \
             --count "${{ inputs.count || '1' }}" \
             --privacy "${{ inputs.privacy || 'public' }}" \
-            ${{ inputs.kind && format('--kind {0}', inputs.kind) || '' }}
+            ${{ inputs.kind && format('--kind {0}', inputs.kind) || '' }} \
+            ${{ (github.event_name == 'workflow_dispatch' && inputs.upload == false) && '--no-upload' || '' }}
 
       - name: Remember what was covered
         # The duplicate guard is only useful if it survives the runner, which
@@ -145,10 +159,26 @@ jobs:
         run: |
           git config user.name "youtube-automation"
           git config user.email "actions@github.com"
-          git add -f history.json || true
+          git add history.json || true
           git diff --cached --quiet || git commit -m "history: $(date -u +%F) ka run"
           git pull --rebase --autostash || true
           git push || echo "history push nahi hua, agla run dobara koshish karega"
+
+      - name: Keep the test videos
+        # Only on a --no-upload test run. A test whose output you cannot watch
+        # proves the pipeline did not crash and nothing else, and the whole
+        # point of testing this one is to look at the visuals. Not done on
+        # scheduled runs: those publish to YouTube, so a second ~60 MB copy in
+        # artifact storage every morning buys nothing.
+        if: always() && github.event_name == 'workflow_dispatch' && inputs.upload == false
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-videos
+          path: |
+            output/**/*.mp4
+            output/**/thumbnail.jpg
+          if-no-files-found: ignore
+          retention-days: 7
 
       - name: Keep the logs
         if: always()

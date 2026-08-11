@@ -17,11 +17,9 @@ import json
 import re
 import subprocess
 import sys
-import zlib
 from datetime import datetime
 from pathlib import Path
 
-import animate3d
 import config
 import research
 import script_writer
@@ -83,28 +81,17 @@ def chapter_list(narration: dict) -> list:
 
 def fetch_visuals(script: dict, narration: dict, work_dir: Path, vertical: bool,
                   label: str) -> list:
-    """Pictures for the beats: 3D characters if asked for, else stock."""
-    category = script.get("category", "general")
-    if config.VISUAL_STYLE == "3d":
-        # A stable seed per title, so a re-render reproduces the same cast and
-        # room while the next video gets a different pair. Python's own hash()
-        # is salted per process and would not.
-        seed = zlib.crc32(script.get("title", label).encode("utf-8"))
-        try:
-            return animate3d.fetch_visuals(
-                narration["beats"], work_dir, vertical, label, category,
-                audio=narration["audio"], seed=seed)
-        except Exception as exc:
-            # Deliberately every exception, not a named few. The point of this
-            # branch is that a stock video still publishes, and that argument
-            # does not care what went wrong. It was a four-exception tuple
-            # until a TypeError in the 3D module's own summary print -- raised
-            # after every scene had rendered -- escaped it and destroyed a
-            # finished video on a live scheduled run.
-            print(f"    [!] 3D render nahi hua ({type(exc).__name__}: {exc}); "
-                  f"stock par gir raha hoon")
+    """Pictures for the beats: real stock footage, generated stills where
+    stock has nothing.
+
+    There used to be a third option here -- 3D cartoon characters rendered in
+    scene3d/ under node and Chrome. It is gone at the owner's call: the channel
+    is world facts over real footage, and a cartoon cast was never what a fact
+    about the Atacama or the Danakil wanted on screen. Removing it also takes
+    node, npm and Chrome out of every cloud run.
+    """
     return visuals.fetch_visuals(narration["beats"], work_dir, vertical, label,
-                                 category)
+                                 script.get("category", "general"))
 
 
 def make_video(script: dict, work_dir: Path, vertical: bool, label: str,
@@ -112,7 +99,8 @@ def make_video(script: dict, work_dir: Path, vertical: bool, label: str,
     beats = script["shorts_beats"] if vertical else script["long_beats"]
     narration = voice.narrate(beats, work_dir, label)
     assets = fetch_visuals(script, narration, work_dir, vertical, label)
-    path = video_mod.build(narration, assets, work_dir, vertical, label, burn_subs)
+    path = video_mod.build(narration, assets, work_dir, vertical, label, burn_subs,
+                           category=script.get("category", ""))
     return path, narration, assets
 
 
