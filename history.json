@@ -440,5 +440,49 @@
     ],
     "folder": "/home/runner/work/youtube-automation/youtube-automation/output/2026-08-11_1113_facts_facts",
     "url": "https://www.youtube.com/watch?v=aYRAFWxN5DE"
+  },
+  {
+    "covered_at": "2026-08-11T14:40:54",
+    "title": "दुनिया के 4 अनोखे सच जो आपको हैरान कर देंगे.",
+    "video_title": "दुनिया के 4 अनोखे सच जो आपको हैरान कर देंगे.",
+    "category": "world",
+    "keywords": [
+      "आपको"
+    ],
+    "subjects": [
+      "ancient",
+      "calendar",
+      "catatumbo",
+      "church",
+      "clocks",
+      "eiffel",
+      "ethiopian",
+      "france",
+      "globe",
+      "guinea",
+      "lake",
+      "lightning",
+      "map",
+      "maracaibo",
+      "night",
+      "papua",
+      "people",
+      "rainforest",
+      "stone",
+      "storm",
+      "timeline",
+      "tower",
+      "traditional",
+      "village",
+      "wall"
+    ],
+    "beat_topics": [
+      "lake maracaibo lightning storm night",
+      "eiffel tower globe map clocks",
+      "ethiopian church ancient calendar wall",
+      "papua new guinea rainforest village"
+    ],
+    "folder": "C:\\Users\\LENOVO\\Downloads\\python-pipeline\\python-pipeline\\output\\2026-08-11_1439_facts_facts",
+    "url": ""
   }
 ]
