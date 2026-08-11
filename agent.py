@@ -175,10 +175,13 @@ def build_animation(args, kind: str) -> dict:
 
     script = story_writer.write_story(kind)
 
-    # A joke set is only fresh if it is not the joke set from yesterday.
+    # A fact set is only fresh if it is not yesterday's fact set. Checked on
+    # the script, not just its title: the titles here are generic by design
+    # ("5 हैरान करने वाले तथ्य" names nothing), so the beats are what says
+    # whether this is the Venus video again.
     fake_topic = {"title": script["title"], "category": script["category"],
                   "related": [], "links": []}
-    duplicate, previous = history.is_duplicate(fake_topic)
+    duplicate, previous = history.is_duplicate(fake_topic, script)
     if duplicate:
         return {"ok": False, "reason": f"bahut milta-julta pehle bana tha: {previous[:50]}"}
 
@@ -397,6 +400,11 @@ def run(args) -> int:
         log("\n--dry-run: yahin ruk raha hoon, koi video nahi banegi.")
         return 0
 
+    # These were never initialised on this path -- the loop below reads both on
+    # its first line, so the trending mode raised NameError the moment it got
+    # past discovery. It has been dead code since CONTENT_MODE went to
+    # animation, which is why nobody hit it.
+    published, attempts = [], 0
     for topic in topics:
         if len(published) >= args.count or attempts >= config.MAX_TOPIC_ATTEMPTS:
             break

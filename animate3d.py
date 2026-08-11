@@ -60,6 +60,10 @@ ALL_CAST = [name for names in CAST.values() for name in names]
 ROOMS = ["house_in", "house_out"]
 SHOTS = ["wide", "left", "wide", "right"]
 
+# Actions the body performs rather than the face. These get their own framing:
+# see the "action" view in scene.html.
+PHYSICAL = {"run", "fight", "jump"}
+
 # Which Mixamo download plays each action. These are ordinary free clips from
 # mixamo.com; every Mixamo character shares one skeleton, so any clip drives
 # any of the cast.
@@ -369,7 +373,10 @@ def fetch_visuals(beats: list, work_dir: Path, vertical: bool, label: str,
             # Whoever is not speaking listens, so the pair reads as a
             # conversation rather than two narrators.
             "speaker": (i % 2) if speaker is None else int(speaker),
-            "shot": SHOTS[i % len(SHOTS)],
+            # A line whose action is physical gets framed for the body rather
+            # than the face. The close shots crop at the chest, which is above
+            # everything a run or a scuffle actually does.
+            "shot": "action" if action in PHYSICAL else SHOTS[i % len(SHOTS)],
             "clip": _action_clip(action),
         }
         dest.with_suffix(".json").write_text(json.dumps(job), encoding="utf-8")

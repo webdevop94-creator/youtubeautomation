@@ -112,7 +112,8 @@ def make_video(script: dict, work_dir: Path, vertical: bool, label: str,
     beats = script["shorts_beats"] if vertical else script["long_beats"]
     narration = voice.narrate(beats, work_dir, label)
     assets = fetch_visuals(script, narration, work_dir, vertical, label)
-    path = video_mod.build(narration, assets, work_dir, vertical, label, burn_subs)
+    path = video_mod.build(narration, assets, work_dir, vertical, label, burn_subs,
+                           category=script.get("category", ""))
     return path, narration, assets
 
 

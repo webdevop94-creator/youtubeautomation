@@ -949,9 +949,21 @@ window.__renderFrame = (t, speaker, level, wide, shot) => {
   // both characters outside a 9:16 frame entirely.
   const sway = Math.sin(t * 0.25) * 0.18;
   const portrait = W < H;
-  const view = portrait ? (speaker ? 'right' : 'left') : shot;
+  // An 'action' shot overrides the usual framing, in portrait as well as
+  // landscape. Running and fighting are things the whole body does, and the
+  // close shots frame from the chest up -- the first time Running.fbx and
+  // Capoeira.fbx actually played, neither was visible, because the camera was
+  // holding a face while the legs did the work below the frame.
+  const view = shot === 'action' ? 'action'
+             : portrait ? (speaker ? 'right' : 'left') : shot;
 
-  if (view === 'left' || view === 'right') {
+  if (view === 'action') {
+    // Far enough back for feet to head, and aimed at mid-body rather than the
+    // face. Portrait keeps to the speaker; landscape takes them both in.
+    const x = portrait ? (speaker ? 1.05 : -1.05) : 0;
+    camera.position.set(x * 0.6 + sway * 0.5, 1.15, portrait ? 3.1 : 4.2);
+    camera.lookAt(x * 0.6, 0.88, 0);
+  } else if (view === 'left' || view === 'right') {
     const x = view === 'left' ? -1.05 : 1.05;
     camera.position.set(x * 0.95 + sway * 0.4, portrait ? 1.10 : 1.35,
                         portrait ? 2.6 : 1.55);

@@ -9,8 +9,17 @@ __pycache__/
 .venv-tts/
 venv/
 env/
-history.json
+# history.json is deliberately NOT ignored. It is the only record of what the
+# channel has already covered, and a GitHub runner is a fresh checkout every
+# morning -- ignored, the agent would wake up each day believing it had never
+# published anything and go straight back to the same facts. The daily workflow
+# commits it back after every run.
 agent.log
+
+# Retired background tracks, kept on disk in case a swap needs undoing.
+# _pick_music only reads files directly inside music/, so a subfolder is
+# already invisible to it -- this just keeps them out of the repo too.
+music/old/
 
 # Throwaway comparison artefacts from tuning voices, visuals and motion.
 voice_samples/
