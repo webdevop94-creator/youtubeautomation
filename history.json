@@ -514,5 +514,34 @@
     ],
     "folder": "/home/runner/work/youtube-automation/youtube-automation/output/2026-08-26_1219_facts_facts",
     "url": "https://www.youtube.com/watch?v=ON-x7yTCkLw"
+  },
+  {
+    "covered_at": "2026-08-26T18:00:57",
+    "title": "दुनिया के 4 अजीब सच जो आप नहीं जानते!",
+    "video_title": "दुनिया के 4 अजीब सच जो आप नहीं जानते!",
+    "category": "world",
+    "keywords": [
+      "जानते"
+    ],
+    "subjects": [
+      "akureyri",
+      "billboard",
+      "bridge",
+      "canyon",
+      "cusco",
+      "fish",
+      "market",
+      "punakhazong",
+      "river",
+      "school"
+    ],
+    "beat_topics": [
+      "Punakhazong Bridge",
+      "Fish River Canyon",
+      "Cusco Market",
+      "Akureyri School Billboard"
+    ],
+    "folder": "/home/runner/work/youtube-automation/youtube-automation/output/2026-08-26_1753_facts_facts",
+    "url": "https://www.youtube.com/watch?v=Yufe2Kp2TlY"
   }
 ]
