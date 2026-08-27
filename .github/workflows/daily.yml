@@ -5,6 +5,9 @@
 # from sleep or hibernate, but nothing wakes a computer that has been shut
 # down. This runs whether the laptop is on, off, or somewhere else entirely.
 name: Daily videos
+# schedule re-registered 2026-08-27: naye repo par cron pehle din silently
+# mute tha; workflow file ko chhoo dene se GitHub scheduler dobara register
+# karta hai.
 
 on:
   schedule:
