@@ -609,5 +609,39 @@
     ],
     "folder": "/home/runner/work/youtube-automation/youtube-automation/output/2026-08-28_2120_facts_facts",
     "url": "https://www.youtube.com/watch?v=aRA2YQyE8nc"
+  },
+  {
+    "covered_at": "2026-08-28T22:01:58",
+    "title": "दुनिया के 4 कम-ज्ञात चौंकाने वाले तथ्य.",
+    "video_title": "दुनिया के 4 कम-ज्ञात चौंकाने वाले तथ्य.",
+    "category": "world",
+    "keywords": [
+      "चौंकाने",
+      "ज्ञात"
+    ],
+    "subjects": [
+      "bosnia",
+      "bridge",
+      "cebuano",
+      "church",
+      "language",
+      "mount",
+      "paramaribo",
+      "philippines",
+      "stari",
+      "vanuatu",
+      "volcano",
+      "wooden",
+      "yasur",
+      "youtube"
+    ],
+    "beat_topics": [
+      "Cebuano language Philippines",
+      "Paramaribo church wooden",
+      "Mount Yasur volcano Vanuatu",
+      "Stari Most bridge Bosnia"
+    ],
+    "folder": "/home/runner/work/youtube-automation/youtube-automation/output/2026-08-28_2152_facts_facts",
+    "url": "https://www.youtube.com/watch?v=2sgVQpBfq0Y"
   }
 ]
