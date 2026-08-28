@@ -543,5 +543,36 @@
     ],
     "folder": "/home/runner/work/youtube-automation/youtube-automation/output/2026-08-26_1753_facts_facts",
     "url": "https://www.youtube.com/watch?v=Yufe2Kp2TlY"
+  },
+  {
+    "covered_at": "2026-08-28T07:16:07",
+    "title": "दुनिया के 4 अजीब सच जिन्हें आप नहीं जानते!",
+    "video_title": "दुनिया के 4 अजीब सच जिन्हें आप नहीं जानते!",
+    "category": "world",
+    "keywords": [
+      "जानते",
+      "जिन्हें"
+    ],
+    "subjects": [
+      "bemaraha",
+      "blue",
+      "dunes",
+      "iceland",
+      "lagoon",
+      "madagascar",
+      "mongolia",
+      "oymyakon",
+      "russia",
+      "singing",
+      "tsingy"
+    ],
+    "beat_topics": [
+      "Blue Lagoon Iceland",
+      "Singing Dunes Mongolia",
+      "Tsingy de Bemaraha Madagascar",
+      "Oymyakon Russia"
+    ],
+    "folder": "/home/runner/work/youtube-automation/youtube-automation/output/2026-08-28_0706_facts_facts",
+    "url": "https://www.youtube.com/watch?v=mCDxZwu33fg"
   }
 ]
