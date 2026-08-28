@@ -574,5 +574,40 @@
     ],
     "folder": "/home/runner/work/youtube-automation/youtube-automation/output/2026-08-28_0706_facts_facts",
     "url": "https://www.youtube.com/watch?v=mCDxZwu33fg"
+  },
+  {
+    "covered_at": "2026-08-28T21:30:04",
+    "title": "विश्व के 4 आश्चर्यजनक तथ्य - आपको हैरान करेंगे!",
+    "video_title": "विश्व के 4 आश्चर्यजनक तथ्य - आपको हैरान करेंगे!",
+    "category": "world",
+    "keywords": [
+      "आपको",
+      "आश्चर्यजनक",
+      "करेंगे",
+      "विश्व"
+    ],
+    "subjects": [
+      "caves",
+      "coral",
+      "geothermal",
+      "geysers",
+      "hveragerdi",
+      "national",
+      "nosy",
+      "park",
+      "reef",
+      "springs",
+      "stalactites",
+      "waitomo",
+      "yala"
+    ],
+    "beat_topics": [
+      "yala national park",
+      "nosy be coral reef",
+      "hveragerdi geothermal springs",
+      "waitomo caves stalactites"
+    ],
+    "folder": "/home/runner/work/youtube-automation/youtube-automation/output/2026-08-28_2120_facts_facts",
+    "url": "https://www.youtube.com/watch?v=aRA2YQyE8nc"
   }
 ]
