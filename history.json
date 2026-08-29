@@ -750,5 +750,37 @@
     ],
     "folder": "/home/runner/work/youtube-automation/youtube-automation/output/2026-08-29_0356_facts_facts",
     "url": "https://www.youtube.com/watch?v=caXR1i_Yr1s"
+  },
+  {
+    "covered_at": "2026-08-29T04:58:10",
+    "title": "दुनिया के 4 अनोखे तथ्य जिन्हें आप नहीं जानते!",
+    "video_title": "दुनिया के 4 अनोखे तथ्य जिन्हें आप नहीं जानते!",
+    "category": "world",
+    "keywords": [
+      "जानते",
+      "जिन्हें"
+    ],
+    "subjects": [
+      "chad",
+      "city",
+      "crater",
+      "desert",
+      "iceland",
+      "interface",
+      "lake",
+      "ramon",
+      "river",
+      "street",
+      "world",
+      "youtube"
+    ],
+    "beat_topics": [
+      "world desert",
+      "Ramon crater",
+      "Iceland river",
+      "Lake Chad"
+    ],
+    "folder": "/home/runner/work/youtube-automation/youtube-automation/output/2026-08-29_0449_facts_facts",
+    "url": "https://www.youtube.com/watch?v=AWSICD3Haj8"
   }
 ]
