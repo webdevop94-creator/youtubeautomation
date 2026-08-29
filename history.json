@@ -782,5 +782,45 @@
     ],
     "folder": "/home/runner/work/youtube-automation/youtube-automation/output/2026-08-29_0449_facts_facts",
     "url": "https://www.youtube.com/watch?v=AWSICD3Haj8"
+  },
+  {
+    "covered_at": "2026-08-29T05:56:24",
+    "title": "4 चौंकाने वाले तथ्य जो आपने नहीं सुने होंगे!",
+    "video_title": "4 चौंकाने वाले तथ्य जो आपने नहीं सुने होंगे!",
+    "category": "world",
+    "keywords": [
+      "आपने",
+      "चौंकाने",
+      "सुने",
+      "होंगे"
+    ],
+    "subjects": [
+      "ancient",
+      "bazaar",
+      "center",
+      "channel",
+      "city",
+      "columbia",
+      "forest",
+      "fungus",
+      "gaziantep",
+      "jars",
+      "laos",
+      "like",
+      "oregon",
+      "plain",
+      "river",
+      "stone",
+      "subscribe",
+      "youtube"
+    ],
+    "beat_topics": [
+      "Gaziantep city center ancient bazaar",
+      "Plain of Jars Laos stone jars",
+      "Oregon Columbia River forest fungus",
+      "YouTube channel like subscribe"
+    ],
+    "folder": "/home/runner/work/youtube-automation/youtube-automation/output/2026-08-29_0547_facts_facts",
+    "url": "https://www.youtube.com/watch?v=MJ1ObpijFIc"
   }
 ]
