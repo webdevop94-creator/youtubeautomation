@@ -716,5 +716,39 @@
     ],
     "folder": "/home/runner/work/youtube-automation/youtube-automation/output/2026-08-29_0246_facts_facts",
     "url": "https://www.youtube.com/watch?v=kFDZEJ7MzS0"
+  },
+  {
+    "covered_at": "2026-08-29T04:05:35",
+    "title": "दुनिया के 4 चौंकाने वाले तथ्य - आपको हैरान कर देंगे!",
+    "video_title": "दुनिया के 4 चौंकाने वाले तथ्य - आपको हैरान कर देंगे!",
+    "category": "world",
+    "keywords": [
+      "आपको",
+      "चौंकाने"
+    ],
+    "subjects": [
+      "bolivia",
+      "church",
+      "desert",
+      "finland",
+      "gobi",
+      "mongolia",
+      "philippines",
+      "porvoo",
+      "princesa",
+      "puerto",
+      "river",
+      "salar",
+      "uyuni",
+      "wooden"
+    ],
+    "beat_topics": [
+      "Salar de Uyuni Bolivia",
+      "Gobi Desert Mongolia",
+      "Puerto Princesa River Philippines",
+      "Porvoo wooden church Finland"
+    ],
+    "folder": "/home/runner/work/youtube-automation/youtube-automation/output/2026-08-29_0356_facts_facts",
+    "url": "https://www.youtube.com/watch?v=caXR1i_Yr1s"
   }
 ]
