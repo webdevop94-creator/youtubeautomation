@@ -822,5 +822,34 @@
     ],
     "folder": "/home/runner/work/youtube-automation/youtube-automation/output/2026-08-29_0547_facts_facts",
     "url": "https://www.youtube.com/watch?v=MJ1ObpijFIc"
+  },
+  {
+    "covered_at": "2026-08-29T14:44:53",
+    "title": "दुनिया के 4 बेहद चौंकाने वाले तथ्य, जो आप नहीं जानते!",
+    "video_title": "दुनिया के 4 बेहद चौंकाने वाले तथ्य, जो आप नहीं जानते!",
+    "category": "world",
+    "keywords": [
+      "चौंकाने",
+      "जानते",
+      "बेहद"
+    ],
+    "subjects": [
+      "beach",
+      "bhutan",
+      "desert",
+      "flag",
+      "island",
+      "lofoten",
+      "madagascar",
+      "tozeur"
+    ],
+    "beat_topics": [
+      "Bhutan flag",
+      "Madagascar island",
+      "Lofoten beach",
+      "Tozeur desert"
+    ],
+    "folder": "/home/runner/work/youtube-automation/youtube-automation/output/2026-08-29_1435_facts_facts",
+    "url": "https://www.youtube.com/watch?v=gGjQ41ryt_4"
   }
 ]
