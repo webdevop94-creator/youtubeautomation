@@ -851,5 +851,36 @@
     ],
     "folder": "/home/runner/work/youtube-automation/youtube-automation/output/2026-08-29_1435_facts_facts",
     "url": "https://www.youtube.com/watch?v=gGjQ41ryt_4"
+  },
+  {
+    "covered_at": "2026-08-30T01:46:04",
+    "title": "विस्मयकारी विश्व तथ्य: 4 अनोखे चौंकाने वाले तथ्य.",
+    "video_title": "विस्मयकारी विश्व तथ्य: 4 अनोखे चौंकाने वाले तथ्य.",
+    "category": "world",
+    "keywords": [
+      "चौंकाने",
+      "विश्व",
+      "विस्मयकारी"
+    ],
+    "subjects": [
+      "antarctica",
+      "canada",
+      "coastline",
+      "ice",
+      "moai",
+      "myanmar",
+      "nui",
+      "rapa",
+      "statues",
+      "villages"
+    ],
+    "beat_topics": [
+      "Rapa Nui Moai statues",
+      "Myanmar villages",
+      "Antarctica ice",
+      "Canada coastline"
+    ],
+    "folder": "/home/runner/work/youtube-automation/youtube-automation/output/2026-08-30_0137_facts_facts",
+    "url": "https://www.youtube.com/watch?v=FE3eLP1z0M4"
   }
 ]
