@@ -1019,5 +1019,33 @@
     ],
     "folder": "/home/runner/work/youtube-automation/youtube-automation/output/2026-08-30_0542_facts_facts",
     "url": "https://www.youtube.com/watch?v=YKU1aVu-Mg8"
+  },
+  {
+    "covered_at": "2026-08-30T14:43:43",
+    "title": "दुनिया के 4 चौंकाने वाले तथ्य - आपको हैरान कर देंगे!",
+    "video_title": "दुनिया के 4 चौंकाने वाले तथ्य - आपको हैरान कर देंगे!",
+    "category": "world",
+    "keywords": [
+      "आपको",
+      "चौंकाने"
+    ],
+    "subjects": [
+      "atacama",
+      "dune",
+      "lake",
+      "madaba",
+      "mosaic",
+      "salar",
+      "sossusvlei",
+      "titicaca"
+    ],
+    "beat_topics": [
+      "Lake Titicaca",
+      "Sossusvlei dune",
+      "Salar de Atacama",
+      "Madaba mosaic"
+    ],
+    "folder": "/home/runner/work/youtube-automation/youtube-automation/output/2026-08-30_1434_facts_facts",
+    "url": "https://www.youtube.com/watch?v=LPjkm01OiwM"
   }
 ]
