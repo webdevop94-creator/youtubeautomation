@@ -978,5 +978,46 @@
     ],
     "folder": "/home/runner/work/youtube-automation/youtube-automation/output/2026-08-30_0437_facts_facts",
     "url": "https://www.youtube.com/watch?v=KGOoBib98Jc"
+  },
+  {
+    "covered_at": "2026-08-30T05:49:58",
+    "title": "दुनिया के 4 चौंकाने वाले तथ्य: क्या आप जानते हैं?",
+    "video_title": "दुनिया के 4 चौंकाने वाले तथ्य: क्या आप जानते हैं?",
+    "category": "world",
+    "keywords": [
+      "चौंकाने",
+      "जानते"
+    ],
+    "subjects": [
+      "atoll",
+      "bay",
+      "beach",
+      "chiapas",
+      "fort",
+      "gardens",
+      "india",
+      "kumbhalgarh",
+      "level",
+      "link",
+      "lowland",
+      "maldives",
+      "mexico",
+      "rajasthan",
+      "river",
+      "sea",
+      "singapore",
+      "tree",
+      "underground",
+      "walkway",
+      "yucatan"
+    ],
+    "beat_topics": [
+      "Maldives beach Maldives atoll Maldives lowland",
+      "Yucatan underground river Chiapas Mexico",
+      "Kumbhalgarh fort Rajasthan India",
+      "Singapore Gardens by the Bay Singapore tree top walkway"
+    ],
+    "folder": "/home/runner/work/youtube-automation/youtube-automation/output/2026-08-30_0542_facts_facts",
+    "url": "https://www.youtube.com/watch?v=YKU1aVu-Mg8"
   }
 ]
