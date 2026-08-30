@@ -882,5 +882,37 @@
     ],
     "folder": "/home/runner/work/youtube-automation/youtube-automation/output/2026-08-30_0137_facts_facts",
     "url": "https://www.youtube.com/watch?v=FE3eLP1z0M4"
+  },
+  {
+    "covered_at": "2026-08-30T02:49:23",
+    "title": "विश्व के 4 चौंकाने वाले तथ्य - जानिए क्या है अजीब!",
+    "video_title": "विश्व के 4 चौंकाने वाले तथ्य - जानिए क्या है अजीब!",
+    "category": "world",
+    "keywords": [
+      "चौंकाने",
+      "विश्व"
+    ],
+    "subjects": [
+      "action",
+      "bhutan",
+      "coast",
+      "djibouti",
+      "fort",
+      "galle",
+      "happiness",
+      "index",
+      "island",
+      "lake",
+      "nauru",
+      "phosphate"
+    ],
+    "beat_topics": [
+      "Djibouti coast lake",
+      "Bhutan happiness index",
+      "Nauru phosphate island",
+      "Galle fort"
+    ],
+    "folder": "/home/runner/work/youtube-automation/youtube-automation/output/2026-08-30_0241_facts_facts",
+    "url": "https://www.youtube.com/watch?v=RlPxN975X6c"
   }
 ]
