@@ -1083,5 +1083,37 @@
     ],
     "folder": "/home/runner/work/youtube-automation/youtube-automation/output/2026-08-31_0138_facts_facts",
     "url": "https://www.youtube.com/watch?v=r57mRaSlOtg"
+  },
+  {
+    "covered_at": "2026-08-31T02:50:35",
+    "title": "दुनिया के 4 अजीब तथ्य जिन्हें आप नहीं जानते!",
+    "video_title": "दुनिया के 4 अजीब तथ्य जिन्हें आप नहीं जानते!",
+    "category": "world",
+    "keywords": [
+      "जानते",
+      "जिन्हें"
+    ],
+    "subjects": [
+      "abandoned",
+      "ainu",
+      "chernobyl",
+      "fort",
+      "galle",
+      "hokkaido",
+      "machu",
+      "museum",
+      "picchu",
+      "ruins",
+      "terraces",
+      "village"
+    ],
+    "beat_topics": [
+      "Galle fort ruins",
+      "Chernobyl abandoned village",
+      "Ainu village Hokkaido",
+      "Machu Picchu terraces"
+    ],
+    "folder": "/home/runner/work/youtube-automation/youtube-automation/output/2026-08-31_0241_facts_facts",
+    "url": "https://www.youtube.com/watch?v=LtlAbFEsNoM"
   }
 ]
