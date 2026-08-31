@@ -1047,5 +1047,41 @@
     ],
     "folder": "/home/runner/work/youtube-automation/youtube-automation/output/2026-08-30_1434_facts_facts",
     "url": "https://www.youtube.com/watch?v=LPjkm01OiwM"
+  },
+  {
+    "covered_at": "2026-08-31T01:45:42",
+    "title": "दुनिया के 4 चौंकाने वाले तथ्य - आपके मन को हिला देंगे!",
+    "video_title": "दुनिया के 4 चौंकाने वाले तथ्य - आपके मन को हिला देंगे!",
+    "category": "world",
+    "keywords": [
+      "आपके",
+      "चौंकाने",
+      "हिला"
+    ],
+    "subjects": [
+      "bridge",
+      "crater",
+      "domluisi",
+      "economy",
+      "island",
+      "lake",
+      "longyearbyen",
+      "nauru",
+      "phosphate",
+      "porto",
+      "sunrise",
+      "svalbard",
+      "swim",
+      "taal",
+      "volcano"
+    ],
+    "beat_topics": [
+      "Nauru island phosphate economy",
+      "Porto DomLuisI bridge",
+      "Taal Volcano crater lake",
+      "Longyearbyen Svalbard sunrise"
+    ],
+    "folder": "/home/runner/work/youtube-automation/youtube-automation/output/2026-08-31_0138_facts_facts",
+    "url": "https://www.youtube.com/watch?v=r57mRaSlOtg"
   }
 ]
