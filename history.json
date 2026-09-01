@@ -1219,5 +1219,35 @@
     ],
     "folder": "/home/runner/work/youtube-automation/youtube-automation/output/2026-09-01_0358_facts_facts",
     "url": "https://www.youtube.com/watch?v=IDkMwH6ddiQ"
+  },
+  {
+    "covered_at": "2026-09-01T04:59:10",
+    "title": "4 दुनिया के अजीब तथ्य, आपको हैरान कर देंगे!",
+    "video_title": "4 दुनिया के अजीब तथ्य, आपको हैरान कर देंगे!",
+    "category": "world",
+    "keywords": [
+      "आपको"
+    ],
+    "subjects": [
+      "blue",
+      "chefchaouen",
+      "geysir",
+      "kewa",
+      "languages",
+      "nairobi",
+      "national",
+      "park",
+      "region",
+      "strokkur",
+      "walls"
+    ],
+    "beat_topics": [
+      "Nairobi National Park",
+      "Kewa region languages",
+      "Chefchaouen blue walls",
+      "Geysir Strokkur"
+    ],
+    "folder": "/home/runner/work/youtube-automation/youtube-automation/output/2026-09-01_0450_facts_facts",
+    "url": "https://www.youtube.com/watch?v=sU0gWKT8Nzk"
   }
 ]
