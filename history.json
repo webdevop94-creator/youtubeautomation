@@ -1249,5 +1249,52 @@
     ],
     "folder": "/home/runner/work/youtube-automation/youtube-automation/output/2026-09-01_0450_facts_facts",
     "url": "https://www.youtube.com/watch?v=sU0gWKT8Nzk"
+  },
+  {
+    "covered_at": "2026-09-01T14:55:15",
+    "title": "दुनिया के 4 अजीब सच: नूक से सर्ट्सेय तक!",
+    "video_title": "दुनिया के 4 अजीब सच: नूक से सर्ट्सेय तक!",
+    "category": "world",
+    "keywords": [
+      "नूक",
+      "सर्ट्सेय"
+    ],
+    "subjects": [
+      "ancient",
+      "art",
+      "atacama",
+      "boat",
+      "desert",
+      "diversity",
+      "ecology",
+      "forest",
+      "greenland",
+      "guinea",
+      "iceland",
+      "island",
+      "language",
+      "moon",
+      "nuuk",
+      "paintings",
+      "papua",
+      "pine",
+      "skin",
+      "surtsey",
+      "traditional",
+      "tribal",
+      "valley",
+      "village",
+      "volcanic",
+      "whale",
+      "wildlife"
+    ],
+    "beat_topics": [
+      "Nuuk, Greenland, traditional boat, whale skin",
+      "Papua New Guinea, language diversity, tribal village",
+      "Atacama Desert, Moon Valley, ancient paintings",
+      "Surtsey, Iceland, volcanic island, pine forest"
+    ],
+    "folder": "/home/runner/work/youtube-automation/youtube-automation/output/2026-09-01_1443_facts_facts",
+    "url": "https://www.youtube.com/watch?v=65TXr9bGNn0"
   }
 ]
