@@ -1115,5 +1115,43 @@
     ],
     "folder": "/home/runner/work/youtube-automation/youtube-automation/output/2026-08-31_0241_facts_facts",
     "url": "https://www.youtube.com/watch?v=LtlAbFEsNoM"
+  },
+  {
+    "covered_at": "2026-09-01T01:50:28",
+    "title": "दुनिया के 4 अजीब तथ्य: भाषाएँ, लेमूर, गर्म घाटी, पेंगुइन.",
+    "video_title": "दुनिया के 4 अजीब तथ्य: भाषाएँ, लेमूर, गर्म घाटी, पेंगुइन.",
+    "category": "world",
+    "keywords": [
+      "गर्म",
+      "घाटी",
+      "पेंगुइन",
+      "भाषाएँ",
+      "लेमूर"
+    ],
+    "subjects": [
+      "antarctica",
+      "basalt",
+      "colony",
+      "danakil",
+      "depression",
+      "ethiopia",
+      "forest",
+      "guinea",
+      "island",
+      "languages",
+      "lemur",
+      "madagascar",
+      "papua",
+      "penguin",
+      "penguins"
+    ],
+    "beat_topics": [
+      "Papua New Guinea island languages",
+      "Madagascar lemur forest",
+      "Ethiopia Danakil Depression basalt",
+      "Antarctica penguin colony"
+    ],
+    "folder": "/home/runner/work/youtube-automation/youtube-automation/output/2026-09-01_0141_facts_facts",
+    "url": "https://www.youtube.com/watch?v=q92DIbvyhyA"
   }
 ]
