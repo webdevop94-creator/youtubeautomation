@@ -1153,5 +1153,36 @@
     ],
     "folder": "/home/runner/work/youtube-automation/youtube-automation/output/2026-09-01_0141_facts_facts",
     "url": "https://www.youtube.com/watch?v=q92DIbvyhyA"
+  },
+  {
+    "covered_at": "2026-09-01T02:59:54",
+    "title": "दुनिया के 4 अनोखे तथ्य: झकझोर देने वाले!",
+    "video_title": "दुनिया के 4 अनोखे तथ्य: झकझोर देने वाले!",
+    "category": "world",
+    "keywords": [
+      "झकझोर"
+    ],
+    "subjects": [
+      "bhutan",
+      "building",
+      "cemetery",
+      "elephant",
+      "lake",
+      "norway",
+      "parliament",
+      "svalbard",
+      "taupo",
+      "volcano",
+      "zambia",
+      "zealand"
+    ],
+    "beat_topics": [
+      "Bhutan Parliament building",
+      "Zambia Elephant cemetery",
+      "New Zealand Lake Taupo",
+      "Norway Svalbard Volcano"
+    ],
+    "folder": "/home/runner/work/youtube-automation/youtube-automation/output/2026-09-01_0251_facts_facts",
+    "url": "https://www.youtube.com/watch?v=YOm6mcVBwn0"
   }
 ]
