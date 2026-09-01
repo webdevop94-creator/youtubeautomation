@@ -1184,5 +1184,40 @@
     ],
     "folder": "/home/runner/work/youtube-automation/youtube-automation/output/2026-09-01_0251_facts_facts",
     "url": "https://www.youtube.com/watch?v=YOm6mcVBwn0"
+  },
+  {
+    "covered_at": "2026-09-01T04:07:39",
+    "title": "दुनिया के 4 चौंकाने वाले तथ्य, आपको हैरान कर देंगे!",
+    "video_title": "दुनिया के 4 चौंकाने वाले तथ्य, आपको हैरान कर देंगे!",
+    "category": "world",
+    "keywords": [
+      "आपको",
+      "चौंकाने"
+    ],
+    "subjects": [
+      "action",
+      "beluga",
+      "bridge",
+      "churchill",
+      "coral",
+      "glass",
+      "leopard",
+      "migration",
+      "mosque",
+      "palau",
+      "population",
+      "tashkent",
+      "walls",
+      "whale",
+      "yala"
+    ],
+    "beat_topics": [
+      "Palau Coral Bridge",
+      "Tashkent Mosque Glass Walls",
+      "Churchill Beluga Whale Migration",
+      "Yala Leopard Population"
+    ],
+    "folder": "/home/runner/work/youtube-automation/youtube-automation/output/2026-09-01_0358_facts_facts",
+    "url": "https://www.youtube.com/watch?v=IDkMwH6ddiQ"
   }
 ]
