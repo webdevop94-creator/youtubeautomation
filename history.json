@@ -1296,5 +1296,41 @@
     ],
     "folder": "/home/runner/work/youtube-automation/youtube-automation/output/2026-09-01_1443_facts_facts",
     "url": "https://www.youtube.com/watch?v=65TXr9bGNn0"
+  },
+  {
+    "covered_at": "2026-09-02T02:09:37",
+    "title": "दुनिया के 4 अजीब तथ्य जो आपको हैरान कर देंगे!",
+    "video_title": "दुनिया के 4 अजीब तथ्य जो आपको हैरान कर देंगे!",
+    "category": "world",
+    "keywords": [
+      "आपको"
+    ],
+    "subjects": [
+      "bhutan",
+      "camel",
+      "coffee",
+      "coral",
+      "cranes",
+      "delta",
+      "desert",
+      "geothermal",
+      "gobi",
+      "hveragerdi",
+      "iceland",
+      "mongolia",
+      "phobjikha",
+      "reef",
+      "senegal",
+      "sine-saloum",
+      "valley"
+    ],
+    "beat_topics": [
+      "Bhutan Phobjikha Valley cranes",
+      "Senegal Sine-Saloum delta coral reef",
+      "Iceland Hveragerdi geothermal coffee",
+      "Mongolia Gobi Desert camel"
+    ],
+    "folder": "/home/runner/work/youtube-automation/youtube-automation/output/2026-09-02_0200_facts_facts",
+    "url": "https://www.youtube.com/watch?v=ZWnS1P84v-w"
   }
 ]
