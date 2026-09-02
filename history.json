@@ -1332,5 +1332,42 @@
     ],
     "folder": "/home/runner/work/youtube-automation/youtube-automation/output/2026-09-02_0200_facts_facts",
     "url": "https://www.youtube.com/watch?v=ZWnS1P84v-w"
+  },
+  {
+    "covered_at": "2026-09-02T03:23:06",
+    "title": "दुनिया के 4 चौंकाने वाले तथ्य जो आप नहीं जानते!",
+    "video_title": "दुनिया के 4 चौंकाने वाले तथ्य जो आप नहीं जानते!",
+    "category": "world",
+    "keywords": [
+      "चौंकाने",
+      "जानते"
+    ],
+    "subjects": [
+      "chile",
+      "churches",
+      "claus",
+      "ethiopia",
+      "finland",
+      "lalibela",
+      "philippines",
+      "princesa",
+      "puc",
+      "puerto",
+      "river",
+      "rock",
+      "rovaniemi",
+      "santa",
+      "underground",
+      "village",
+      "volcano"
+    ],
+    "beat_topics": [
+      "Lalibela rock churches Ethiopia",
+      "Rovaniemi Santa Claus Village Finland",
+      "Pucón volcano Chile",
+      "Puerto Princesa underground river Philippines"
+    ],
+    "folder": "/home/runner/work/youtube-automation/youtube-automation/output/2026-09-02_0312_facts_facts",
+    "url": "https://www.youtube.com/watch?v=Mr2M5RuYk30"
   }
 ]
