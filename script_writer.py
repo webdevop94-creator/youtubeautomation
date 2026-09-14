@@ -353,7 +353,10 @@ def _providers() -> list:
                       "max_tokens": 16000})
     if config.GROQ_API_KEY:
         chain.append({"name": "groq", "url": GROQ_API, "key": config.GROQ_API_KEY,
-                      "model": config.GROQ_MODEL, "json_mode": True})
+                      "model": config.GROQ_MODEL, "json_mode": True,
+                      # gpt-oss thinks before it writes and the thinking is
+                      # billed against max_tokens, same as Gemini's flash.
+                      "max_tokens": 8000})
     if config.NVIDIA_API_KEY:
         reasoning = bool(re.search(r"gpt-oss|deepseek-r|reason|nemotron|qwq|think",
                                    config.NVIDIA_MODEL, re.I))
@@ -518,6 +521,11 @@ def _finish_reason(resp) -> str:
         return ""
 
 
+# Seconds a single script request may take. Gemini and Groq answer in well
+# under a minute; this is for NVIDIA NIM's free tier, which queues.
+_post_timeout = 240
+
+
 def _post(provider: dict, messages: list, max_tokens: int = None):
     body = {"model": provider["model"], "temperature": 0.7,
             "max_tokens": max_tokens or provider.get("max_tokens", 4000),
@@ -533,7 +541,7 @@ def _post(provider: dict, messages: list, max_tokens: int = None):
         provider["url"],
         headers={"Authorization": f"Bearer {provider['key']}",
                  "Content-Type": "application/json", "Accept": "application/json"},
-        json=body, timeout=180)
+        json=body, timeout=_post_timeout)
 
 
 def _content(resp) -> str:
@@ -563,7 +571,19 @@ def _call_llm(messages: list, retries: int = 3) -> dict:
         last = index == len(chain) - 1
         budget = provider.get("max_tokens", 4000)
         for attempt in range(retries):
-            resp = _post(provider, messages, max_tokens=budget)
+            try:
+                resp = _post(provider, messages, max_tokens=budget)
+            except requests.exceptions.Timeout:
+                # A provider that will not answer inside the deadline is a slow
+                # provider, not a dead network -- the agent used to read this
+                # as "internet down", wait, and retry the whole video five
+                # times, and on 2 Sep 2026 that burned twenty minutes of GitHub
+                # Actions per run for ten days straight. Hand over instead.
+                problems.append(f"{provider['name']}: timeout ({_post_timeout}s)")
+                if not last:
+                    print(f"    [!] {provider['name']} {_post_timeout}s mein nahi bola — "
+                          f"{chain[index + 1]['name']} try kar raha hoon")
+                break
             if resp.status_code == 200:
                 try:
                     data = _extract_json(_content(resp))

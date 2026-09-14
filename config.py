@@ -12,7 +12,10 @@ load_dotenv(ROOT / ".env")
 # --- API keys -------------------------------------------------------------
 GROQ_API_KEY = os.getenv("GROQ_API_KEY", "").strip()
 PEXELS_API_KEY = os.getenv("PEXELS_API_KEY", "").strip()
-GROQ_MODEL = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile").strip()
+# llama-3.3-70b-versatile was retired by Groq in September 2026 -- the API
+# answers 404 model_not_found for it. gpt-oss-120b is what is left that
+# accepts response_format json_object and answers in about a second.
+GROQ_MODEL = os.getenv("GROQ_MODEL", "openai/gpt-oss-120b").strip()
 
 # Script writers are tried in order: Gemini, then Groq, then NVIDIA.
 #
