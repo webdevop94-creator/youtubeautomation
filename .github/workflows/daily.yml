@@ -9,6 +9,8 @@ name: Daily videos
 # mute tha; workflow file ko chhoo dene se GitHub scheduler dobara register
 # karta hai.
 
+# schedule re-registered 2026-09-14: naye account/repo par cron pehle din
+# silently mute rehta hai; workflow file ko chhoona use register karta hai.
 on:
   schedule:
     # GitHub cron is UTC, and IST is UTC+5:30 -- so 01:30 UTC is 07:00 IST and
