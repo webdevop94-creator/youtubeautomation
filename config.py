@@ -29,7 +29,10 @@ GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-3.6-flash").strip()
 # Groq's free tier is 100,000 tokens/day, roughly five videos. NVIDIA NIM
 # backs it up so a dry quota never costs the whole day.
 NVIDIA_API_KEY = os.getenv("NVIDIA_API_KEY", "").strip()
-NVIDIA_MODEL = os.getenv("NVIDIA_MODEL", "openai/gpt-oss-20b").strip()
+# gpt-oss-20b on NIM's free tier thinks for a minute and then hands back an
+# empty answer -- finish_reason length, content None -- on the real prompt;
+# nemotron-3-super answers the same brief in about ten seconds with JSON.
+NVIDIA_MODEL = os.getenv("NVIDIA_MODEL", "nvidia/nemotron-3-super-120b-a12b").strip()
 YOUTUBE_CLIENT_ID = os.getenv("YOUTUBE_CLIENT_ID", "").strip()
 YOUTUBE_CLIENT_SECRET = os.getenv("YOUTUBE_CLIENT_SECRET", "").strip()
 UPLOAD_PRIVACY = os.getenv("UPLOAD_PRIVACY", "private").strip().lower()
