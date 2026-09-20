@@ -2645,5 +2645,47 @@
     ],
     "folder": "/home/runner/work/youtubeautomation/youtubeautomation/output/2026-09-19_1441_facts_facts",
     "url": "https://www.youtube.com/watch?v=38qR7FGnDyI"
+  },
+  {
+    "covered_at": "2026-09-20T01:41:02",
+    "title": "दुनिया के 4 सबसे अजीब सच जो कोई नहीं बताता!",
+    "video_title": "दुनिया के 4 सबसे अजीब सच जो कोई नहीं बताता!",
+    "category": "world",
+    "keywords": [
+      "कोई",
+      "बताता"
+    ],
+    "subjects": [
+      "argan",
+      "bear",
+      "border",
+      "bridge",
+      "churchill",
+      "climbing",
+      "coastline",
+      "french",
+      "goats",
+      "guiana",
+      "island",
+      "manitoba",
+      "moroccan",
+      "niue",
+      "ocean",
+      "oyapock",
+      "pacific",
+      "polar",
+      "river",
+      "snowy",
+      "street",
+      "tree"
+    ],
+    "beat_topics": [
+      "oyapock river border bridge french guiana",
+      "niue island pacific ocean coastline",
+      "churchill manitoba snowy street polar bear",
+      "moroccan goats climbing argan tree"
+    ],
+    "folder": "/home/runner/work/youtubeautomation/youtubeautomation/output/2026-09-20_0136_facts_facts",
+    "url": "https://www.youtube.com/watch?v=cYa3S__qqmY"
   }
 ]
