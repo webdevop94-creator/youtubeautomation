@@ -2736,5 +2736,38 @@
     ],
     "folder": "/home/runner/work/youtubeautomation/youtubeautomation/output/2026-09-20_0239_facts_facts",
     "url": "https://www.youtube.com/watch?v=bmt0NKMXCuA"
+  },
+  {
+    "covered_at": "2026-09-20T03:50:04",
+    "title": "दुनिया के 4 चौंकाने वाले रहस्यमय तथ्य!",
+    "video_title": "दुनिया के 4 चौंकाने वाले रहस्यमय तथ्य!",
+    "category": "world",
+    "keywords": [
+      "चौंकाने",
+      "रहस्यमय"
+    ],
+    "subjects": [
+      "blue",
+      "city",
+      "houses",
+      "jars",
+      "jodhpur",
+      "laos",
+      "nairobi",
+      "national",
+      "oymyakon",
+      "park",
+      "plain",
+      "skyline",
+      "village"
+    ],
+    "beat_topics": [
+      "Oymyakon village",
+      "Jodhpur blue houses",
+      "Nairobi National Park city skyline",
+      "Plain of Jars Laos"
+    ],
+    "folder": "/home/runner/work/youtubeautomation/youtubeautomation/output/2026-09-20_0345_facts_facts",
+    "url": "https://www.youtube.com/watch?v=oNC3dIZxUnE"
   }
 ]
